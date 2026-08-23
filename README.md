@@ -86,6 +86,19 @@ Copilot Provider Bridge configures models and tools for VS Code's native BYOK en
     > *"Inspect the UI screenshot in `./assets/mockup.png` and generate the matching Tailwind CSS components."*
   - The text-only model automatically invokes the built-in **Vision Agent Tool** (`provider_bridge_analyze_visual`), which queries your configured vision backend (`GLM-4.6V`, `Gemini 2.5 Flash`, etc.) and feeds structured OCR and layout analysis back into the coding session within its full context window (up to 1M on GLM-5.3 and DeepSeek V4 Pro, ~200K on GLM-4.7, 128K on Qwen 3.6 Flash).
 
+## Editable Provider Catalog
+
+The entire model catalog — providers, endpoints, token limits, vision backends, and MCP presets — can be overridden by a single user-editable file, so provider changes no longer wait on an extension release.
+
+- **File**: `copilot-provider-bridge.jsonc` in your VS Code user directory (`%APPDATA%\Code\User\` on Windows, `~/.config/Code/User/` on Linux, `~/Library/Application Support/Code/User/` on macOS), next to `chatLanguageModels.json`.
+- **Opt-in**: with no file present, bundled defaults are used. **`Copilot Provider Bridge: Customize Provider Catalog`** writes a commented template from those defaults and opens it; from then on the file wins.
+- **Whole-section override**: each present top-level section (`providers`, `visionBackends`, `mcpPresets`) fully replaces the bundled defaults for that section; delete a section or the whole file to fall back. No deep merging happens.
+- **Live reload**: the file is watched — save to apply changes without restarting VS Code. Invalid files are rejected with a warning (line/column reported) while the last-good catalog keeps serving.
+- **IntelliSense**: a JSON Schema ships with the extension (`contributes.jsonValidation`), giving completions, hovers, and validation directly in the editor.
+- **Derived fields**: `maxInputTokens = contextWindow - maxOutputTokens` and `secretInput = copilot-provider-bridge.<id>.apiKey` are computed when omitted. API keys are never stored in this file — they live in SecretStorage / `chatLanguageModels.json` exactly as before.
+- **Usage tracking contract**: quota polling exists only for built-in ids with usage fetchers (`zai`, `deepseek`, `minimax`, `kimi`, `openrouter`) plus the NVIDIA stub. Custom providers serve models fine but show no quota badge; renaming a built-in `id` disables its usage tracking (renaming `name`/`description` is always safe).
+- **Updates**: after updating the extension with an existing catalog file, a one-time notice points you to **Migrate Provider Catalog to Latest Defaults** — it backs up your file (newest 3 kept), regenerates a fresh template from the newest verified defaults, and opens both side-by-side for manual porting. No silent auto-merge ever touches your edits. **Reset Provider Catalog to Defaults** deletes the file for a clean restart.
+
 ## Commands
 
 - **Copilot Provider Bridge: Quick Setup (Models & MCP Tools)** — run the first-time setup wizard to configure multiple providers and companion MCP tools in one pass.
@@ -102,6 +115,12 @@ Copilot Provider Bridge configures models and tools for VS Code's native BYOK en
 - **Copilot Provider Bridge: Show Debug Output Logs** — open the dedicated Copilot Provider Bridge output log channel.
 - **Copilot Provider Bridge: Toggle Debug Logging** — toggle verbose debug logging on or off.
 - **Copilot Provider Bridge: Reset All Configuration & Clear Secrets** — reset all Copilot Provider Bridge settings, clear stored secrets in SecretStorage, and clean up bridge models and companion MCP servers.
+
+- **Copilot Provider Bridge: Customize Provider Catalog (Editable Models & Endpoints)** — create (or recreate) the editable catalog file from the bundled defaults and open it.
+- **Copilot Provider Bridge: Open Provider Catalog File** — reveal the catalog file, offering creation if absent.
+- **Copilot Provider Bridge: Reload Provider Catalog** — force a re-read of the catalog file.
+- **Copilot Provider Bridge: Migrate Provider Catalog to Latest Defaults** — back up the current file, regenerate from newest defaults, open both for manual porting.
+- **Copilot Provider Bridge: Reset Provider Catalog to Defaults (Delete Customizations)** — delete the catalog file and revert to bundled defaults.
 
 ## Requirements
 
