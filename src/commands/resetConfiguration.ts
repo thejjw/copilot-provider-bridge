@@ -122,13 +122,32 @@ export async function resetConfigurationCommand(context: vscode.ExtensionContext
     return;
   }
 
+  // Offer to also delete the user-editable provider catalog file (if present).
+  let catalogDeleted = false;
+  try {
+    await fs.access(catalogStore.filePath());
+    const deleteCatalog = await vscode.window.showWarningMessage(
+      'A provider catalog customization file was found. Also delete it so the bundled defaults are restored?',
+      { modal: true },
+      'Delete Catalog File'
+    );
+    if (deleteCatalog === 'Delete Catalog File') {
+      await fs.rm(catalogStore.filePath());
+      await catalogStore.reload();
+      catalogDeleted = true;
+      Logger.info('Provider catalog customization file deleted during reset.');
+    }
+  } catch {
+    // No catalog file present (or already gone) - nothing to offer.
+  }
+
   await resetCopilotProviderBridgeState(context);
 
   // Refresh status bar
   void vscode.commands.executeCommand('copilot-provider-bridge.refreshUsage');
 
   const action = await vscode.window.showInformationMessage(
-    'Copilot Provider Bridge extension configuration and secrets have been cleared.',
+    `Copilot Provider Bridge extension configuration and secrets have been cleared.${catalogDeleted ? ' Provider catalog file deleted; bundled defaults restored.' : ''}`,
     'Run Quick Setup Now',
     'Reveal chatLanguageModels.json'
   );

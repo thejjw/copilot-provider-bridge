@@ -8,6 +8,14 @@ import { configureMcpCommand } from './commands/addMcp';
 import { removeMcpCommand } from './commands/removeMcp';
 import { quickSetupCommand } from './commands/setup';
 import { configureUsageKeyCommand } from './commands/configureUsageKey';
+import {
+  customizeCatalogCommand,
+  migrateCatalogCommand,
+  openCatalogFileCommand,
+  reloadCatalogCommand,
+  resetCatalogCommand,
+  runCatalogUpgradeNotice,
+} from './commands/catalog';
 import { selectVisionModelCommand } from './commands/selectVisionModel';
 import { runDiagnosticsCommand } from './commands/diagnostics';
 import { UsageStatusBarManager } from './usage/statusBar';
@@ -53,8 +61,13 @@ export function activate(context: vscode.ExtensionContext): void {
   Logger.initialize(context);
   Logger.debug('Activating Copilot Provider Bridge extension...');
 
-  // Load the user-editable catalog (falls back to bundled defaults) and start watching it.
-  void catalogStore.init(context);
+  // Load the user-editable catalog (falls back to bundled defaults), start
+  // watching it, and warn once when it predates this extension version.
+  void (async () => {
+    await catalogStore.init(context);
+    await runCatalogUpgradeNotice(context);
+  })();
+
 
   // Initialize status bar usage manager
   const statusBarManager = new UsageStatusBarManager(context);
@@ -90,6 +103,11 @@ export function activate(context: vscode.ExtensionContext): void {
         `Copilot Provider Bridge: Debug logging ${enabled ? 'ENABLED' : 'DISABLED'}.`
       );
     }),
+    vscode.commands.registerCommand('copilot-provider-bridge.customizeCatalog', () => customizeCatalogCommand()),
+    vscode.commands.registerCommand('copilot-provider-bridge.openCatalogFile', () => openCatalogFileCommand()),
+    vscode.commands.registerCommand('copilot-provider-bridge.reloadCatalog', () => reloadCatalogCommand()),
+    vscode.commands.registerCommand('copilot-provider-bridge.migrateCatalog', () => migrateCatalogCommand()),
+    vscode.commands.registerCommand('copilot-provider-bridge.resetCatalog', () => resetCatalogCommand()),
     vscode.commands.registerCommand('copilot-provider-bridge.resetConfiguration', () =>
       resetConfigurationCommand(context)
     ),
