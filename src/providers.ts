@@ -5,7 +5,17 @@
 // Invariant (per VS Code BYOK specification):
 //   maxInputTokens = contextWindow - maxOutputTokens (maxInputTokens + maxOutputTokens <= contextWindow)
 
-export type ProviderId = 'zai' | 'deepseek' | 'minimax' | 'kimi' | 'qwen' | 'gemini' | 'openrouter' | 'nvidia';
+/**
+ * Ids with built-in behavior beyond serving models (usage/quota fetchers,
+ * diagnostics key checks). Custom catalog entries get arbitrary string ids.
+ */
+export type KnownProviderId = 'zai' | 'deepseek' | 'minimax' | 'kimi' | 'qwen' | 'gemini' | 'openrouter' | 'nvidia';
+
+/** Any provider id from the catalog - built-in or user-defined. */
+export type ProviderId = string;
+
+/** Marker prefix used in secretInput names and chatLanguageModels.json groups we wrote. */
+export const EXTENSION_MARKER = 'copilot-provider-bridge.';
 
 export interface ProviderModel {
   /** Wire-format model id (sent to upstream API). */

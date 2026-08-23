@@ -5,7 +5,7 @@ import * as fs from 'node:fs/promises';
 import { homedir } from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { PROVIDERS, type Provider, type ProviderId, type ProviderModel } from './providers';
+import { EXTENSION_MARKER, PROVIDERS, type Provider, type ProviderId, type ProviderModel } from './providers';
 import { Logger } from './utils/logger';
 
 /** A single model entry inside a provider's `models` array. */
@@ -37,8 +37,9 @@ export interface ConfigGroup {
 /** Top-level shape of chatLanguageModels.json. */
 export type ConfigFile = ConfigGroup[];
 
-/** Marker we use to recognize groups we wrote. The value matches the secretInput. */
-export const EXTENSION_MARKER = 'copilot-provider-bridge.';
+// Marker we use to recognize groups we wrote. Defined in providers.ts (pure module);
+// re-exported here for the existing config-layer consumers.
+export { EXTENSION_MARKER };
 
 /** Detect "Code" vs "Code - Insiders" from the running editor's appRoot. */
 function codeFlavor(): string {
