@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { PROVIDERS, type Provider, type ProviderModel } from '../providers';
+import { catalogStore } from '../catalog/store';
+import type { Provider, ProviderModel } from '../providers';
 import {
   findGroupIndex,
   providerToConfig,
@@ -7,10 +8,10 @@ import {
   userConfigPath,
   writeConfig,
 } from '../config';
-import { getMcpPresetsForProvider, mergeMcpConfig } from '../mcpCatalog';
 import { readMcpFile, userMcpConfigPath, workspaceMcpConfigPath, writeMcpFile } from './addMcp';
 import { validateProviderKey } from './setup';
 import { Logger } from '../utils/logger';
+import { mergeMcpConfig } from '../mcpCatalog';
 
 /**
  * Multi-step add flow:
@@ -23,7 +24,7 @@ import { Logger } from '../utils/logger';
  */
 export async function addModelCommand(context?: vscode.ExtensionContext): Promise<void> {
   const providerPick = await vscode.window.showQuickPick(
-    PROVIDERS.map((p) => ({
+    catalogStore.get().providers.map((p) => ({
       label: p.name,
       description: `${p.models.length} model${p.models.length === 1 ? '' : 's'} (${p.apiType})`,
       detail: p.description,
@@ -137,7 +138,7 @@ export async function addModelCommand(context?: vscode.ExtensionContext): Promis
   }
 
   // Step A: Check for companion MCP tools for this provider
-  const companionPresets = getMcpPresetsForProvider(provider.id);
+  const companionPresets = catalogStore.get().mcpPresets.filter((preset) => preset.providerId === provider.id);
   if (companionPresets.length > 0) {
     const mcpChoice = await vscode.window.showQuickPick(
       [

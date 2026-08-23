@@ -2,7 +2,8 @@ import * as fs from 'node:fs/promises';
 import { homedir } from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { MCP_PRESETS, mergeMcpConfig, type McpConfigFile, type McpPreset } from '../mcpCatalog';
+import { mergeMcpConfig, type McpConfigFile, type McpPreset } from '../mcpCatalog';
+import { catalogStore } from '../catalog/store';
 import { Logger } from '../utils/logger';
 
 function codeFlavor(): string {
@@ -86,7 +87,7 @@ export async function configureMcpCommand(): Promise<void> {
   if (!targetPick) return;
 
   const presetPicks = await vscode.window.showQuickPick(
-    MCP_PRESETS.map((preset) => ({
+    catalogStore.get().mcpPresets.map((preset) => ({
       label: preset.name,
       description: preset.server.type === 'http' ? '$(cloud) HTTP SSE' : '$(terminal) stdio CLI',
       detail: preset.description,

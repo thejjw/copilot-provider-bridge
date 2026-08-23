@@ -1,7 +1,14 @@
 // HTTP fetchers for provider plan usage, quota limits, and account balances.
 
-import type { ProviderId } from '../providers';
+import type { KnownProviderId } from '../providers';
 import { formatCountdown, type QuotaResetInfo, type UsageReport, type UsageStatus } from './types';
+
+/**
+ * Provider ids with built-in usage behavior (a real quota/balance fetcher, or
+ * the intentional NVIDIA stub). Custom catalog ids never get usage tracking;
+ * single source of truth for the usage-key picker, polling, and diagnostics.
+ */
+export const USAGE_SUPPORTED_IDS: readonly KnownProviderId[] = ['zai', 'deepseek', 'minimax', 'kimi', 'openrouter', 'nvidia'];
 
 const FETCH_TIMEOUT_MS = 6000;
 

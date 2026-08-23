@@ -5,10 +5,9 @@
 
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
-import { PROVIDERS } from '../providers';
 import { readConfig, writeConfig, userConfigPath } from '../config';
+import { catalogStore } from '../catalog/store';
 import { readMcpFile, userMcpConfigPath, workspaceMcpConfigPath, writeMcpFile } from './addMcp';
-import { MCP_PRESETS } from '../mcpCatalog';
 import { Logger } from '../utils/logger';
 
 export interface ResetOptions {
@@ -25,7 +24,7 @@ export async function resetCopilotProviderBridgeState(
 
   // 1. Clear Extension Secrets
   let clearedSecretsCount = 0;
-  for (const p of PROVIDERS) {
+  for (const p of catalogStore.get().providers) {
     const secretKey = `copilot-provider-bridge.${p.id}.apiKey`;
     await context.secrets.delete(secretKey);
     clearedSecretsCount++;
@@ -51,7 +50,7 @@ export async function resetCopilotProviderBridgeState(
           const filtered = parsed.filter(
             (g) =>
               !g.apiKey?.includes('copilot-provider-bridge.') &&
-              !PROVIDERS.some((p) => g.name === p.name)
+              !catalogStore.get().providers.some((p) => g.name === p.name)
           );
           await fs.writeFile(targetConfig, JSON.stringify(filtered, null, 2) + '\n', 'utf8');
           Logger.info(`Cleaned chatLanguageModels.json at ${targetConfig}`);
@@ -68,8 +67,9 @@ export async function resetCopilotProviderBridgeState(
     ...(workspaceMcpConfigPath() ? [workspaceMcpConfigPath()!] : []),
   ];
 
-  const knownMcpKeys = new Set(MCP_PRESETS.map((p) => p.serverKey));
-  const knownInputIds = new Set(MCP_PRESETS.flatMap((p) => p.inputs.map((i) => i.id)));
+  const effectivePresets = catalogStore.get().mcpPresets;
+  const knownMcpKeys = new Set(effectivePresets.map((p) => p.serverKey));
+  const knownInputIds = new Set(effectivePresets.flatMap((p) => p.inputs.map((i) => i.id)));
 
   for (const p of targetMcpPaths) {
     try {
@@ -122,13 +122,32 @@ export async function resetConfigurationCommand(context: vscode.ExtensionContext
     return;
   }
 
+  // Offer to also delete the user-editable provider catalog file (if present).
+  let catalogDeleted = false;
+  try {
+    await fs.access(catalogStore.filePath());
+    const deleteCatalog = await vscode.window.showWarningMessage(
+      'A provider catalog customization file was found. Also delete it so the bundled defaults are restored?',
+      { modal: true },
+      'Delete Catalog File'
+    );
+    if (deleteCatalog === 'Delete Catalog File') {
+      await fs.rm(catalogStore.filePath());
+      await catalogStore.reload();
+      catalogDeleted = true;
+      Logger.info('Provider catalog customization file deleted during reset.');
+    }
+  } catch {
+    // No catalog file present (or already gone) - nothing to offer.
+  }
+
   await resetCopilotProviderBridgeState(context);
 
   // Refresh status bar
   void vscode.commands.executeCommand('copilot-provider-bridge.refreshUsage');
 
   const action = await vscode.window.showInformationMessage(
-    'Copilot Provider Bridge extension configuration and secrets have been cleared.',
+    `Copilot Provider Bridge extension configuration and secrets have been cleared.${catalogDeleted ? ' Provider catalog file deleted; bundled defaults restored.' : ''}`,
     'Run Quick Setup Now',
     'Reveal chatLanguageModels.json'
   );

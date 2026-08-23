@@ -2,7 +2,9 @@
 // for live quota tracking, balance display, and usage polling.
 
 import * as vscode from 'vscode';
-import { PROVIDERS, type ProviderId } from '../providers';
+import type { ProviderId } from '../providers';
+import { catalogStore } from '../catalog/store';
+import { USAGE_SUPPORTED_IDS } from '../usage/fetchers';
 import {
   fetchDeepseekUsage,
   fetchKimiUsage,
@@ -23,8 +25,8 @@ export async function configureUsageKeyCommand(
   let providerId = preselectedProviderId;
 
   if (!providerId) {
-    const supportedProviders = PROVIDERS.filter((p) =>
-      ['zai', 'deepseek', 'minimax', 'kimi', 'openrouter', 'nvidia'].includes(p.id)
+    const supportedProviders = catalogStore.get().providers.filter((p) =>
+      (USAGE_SUPPORTED_IDS as readonly string[]).includes(p.id)
     );
 
     const pick = await vscode.window.showQuickPick(
@@ -49,7 +51,7 @@ export async function configureUsageKeyCommand(
     (await context.secrets.get(secretKey)) ??
     process.env[`${providerId.toUpperCase()}_API_KEY`];
 
-  const provider = PROVIDERS.find((p) => p.id === providerId);
+  const provider = catalogStore.get().providers.find((p) => p.id === providerId);
   const providerName = provider?.name ?? providerId;
 
   const input = await vscode.window.showInputBox({

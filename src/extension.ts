@@ -8,14 +8,24 @@ import { configureMcpCommand } from './commands/addMcp';
 import { removeMcpCommand } from './commands/removeMcp';
 import { quickSetupCommand } from './commands/setup';
 import { configureUsageKeyCommand } from './commands/configureUsageKey';
+import {
+  customizeCatalogCommand,
+  migrateCatalogCommand,
+  openCatalogFileCommand,
+  reloadCatalogCommand,
+  resetCatalogCommand,
+  runCatalogUpgradeNotice,
+} from './commands/catalog';
 import { selectVisionModelCommand } from './commands/selectVisionModel';
 import { runDiagnosticsCommand } from './commands/diagnostics';
 import { UsageStatusBarManager } from './usage/statusBar';
 import { resetConfigurationCommand } from './commands/resetConfiguration';
-import { CopilotProviderBridgeVisionTool, VISION_BACKENDS } from './tools/visionTool';
+import { CopilotProviderBridgeVisionTool } from './tools/visionTool';
+import { catalogStore } from './catalog/store';
 import { Logger } from './utils/logger';
 
-export { PROVIDERS, type Provider, type ProviderId, type ProviderModel } from './providers';
+export { catalogStore, mergeWithDefaults, type EffectiveCatalog } from './catalog/store';
+export { CATALOG_FILE_NAME, CATALOG_SCHEMA_VERSION, type CatalogFileSections } from './catalog/catalogFile';
 export {
   modelToConfig,
   providerToConfig,
@@ -29,9 +39,7 @@ export {
   type ConfigFile,
 } from './config';
 export {
-  MCP_PRESETS,
   mergeMcpConfig,
-  getMcpPresetsForProvider,
   type McpPreset,
   type McpConfigFile,
   type McpInputDefinition,
@@ -44,13 +52,22 @@ export { runDiagnosticsCommand } from './commands/diagnostics';
 export { UsageStatusBarManager } from './usage/statusBar';
 export { resetConfigurationCommand, resetCopilotProviderBridgeState } from './commands/resetConfiguration';
 export { getPieGlyph, formatCountdown, type UsageReport } from './usage/types';
-export { CopilotProviderBridgeVisionTool, VISION_BACKENDS } from './tools/visionTool';
+export { CopilotProviderBridgeVisionTool, type VisionBackendOption } from './tools/visionTool';
+export { VISION_BACKENDS } from './tools/visionBackends';
 export { Logger } from './utils/logger';
 
 export function activate(context: vscode.ExtensionContext): void {
   // Initialize Logger
   Logger.initialize(context);
   Logger.debug('Activating Copilot Provider Bridge extension...');
+
+  // Load the user-editable catalog (falls back to bundled defaults), start
+  // watching it, and warn once when it predates this extension version.
+  void (async () => {
+    await catalogStore.init(context);
+    await runCatalogUpgradeNotice(context);
+  })();
+
 
   // Initialize status bar usage manager
   const statusBarManager = new UsageStatusBarManager(context);
@@ -86,6 +103,11 @@ export function activate(context: vscode.ExtensionContext): void {
         `Copilot Provider Bridge: Debug logging ${enabled ? 'ENABLED' : 'DISABLED'}.`
       );
     }),
+    vscode.commands.registerCommand('copilot-provider-bridge.customizeCatalog', () => customizeCatalogCommand()),
+    vscode.commands.registerCommand('copilot-provider-bridge.openCatalogFile', () => openCatalogFileCommand()),
+    vscode.commands.registerCommand('copilot-provider-bridge.reloadCatalog', () => reloadCatalogCommand()),
+    vscode.commands.registerCommand('copilot-provider-bridge.migrateCatalog', () => migrateCatalogCommand()),
+    vscode.commands.registerCommand('copilot-provider-bridge.resetCatalog', () => resetCatalogCommand()),
     vscode.commands.registerCommand('copilot-provider-bridge.resetConfiguration', () =>
       resetConfigurationCommand(context)
     ),

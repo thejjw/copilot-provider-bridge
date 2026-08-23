@@ -2,8 +2,10 @@
 // Validates chatLanguageModels.json, tests live API endpoints, measures latency,
 // and outputs a detailed diagnostic report to the Output Channel.
 
+import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
-import { PROVIDERS, type ProviderId } from '../providers';
+import type { ProviderId } from '../providers';
+import { catalogStore } from '../catalog/store';
 import { readConfig } from '../config';
 import { Logger } from '../utils/logger';
 
@@ -26,12 +28,24 @@ export async function runDiagnosticsCommand(context: vscode.ExtensionContext): P
       if (cfg.length === 0) {
         Logger.warn('No provider groups configured in chatLanguageModels.json! Run Quick Setup or Add Model first.');
       }
+      // 1b. Report the active provider catalog source
+      progress.report({ message: 'Inspecting provider catalog...' });
+      const catalog = catalogStore.get();
+      Logger.info(`Provider catalog source: ${catalog.source === 'file' ? 'user catalog file' : 'bundled defaults'} (${catalog.providers.length} providers / ${catalog.visionBackends.length} vision backends / ${catalog.mcpPresets.length} MCP presets)`);
+      Logger.info(`Catalog file path: ${catalogStore.filePath()}`);
+      try {
+        const stat = await fs.stat(catalogStore.filePath());
+        Logger.info(`Catalog file last modified: ${stat.mtime.toISOString()}`);
+      } catch {
+        Logger.info('Catalog file does not exist.');
+      }
+
 
       // 2. Inspect configured keys in SecretStorage and environment
       progress.report({ message: 'Checking API keys in SecretStorage & Environment...' });
       const keyMap = new Map<ProviderId, string>();
 
-      for (const p of PROVIDERS) {
+      for (const p of catalogStore.get().providers) {
         const secretKey = `copilot-provider-bridge.${p.id}.apiKey`;
         const secretVal = await context.secrets.get(secretKey);
         const envVal = process.env[`${p.id.toUpperCase()}_API_KEY`];
@@ -51,7 +65,7 @@ export async function runDiagnosticsCommand(context: vscode.ExtensionContext): P
       let failCount = 0;
 
       for (const group of cfg) {
-        const prov = PROVIDERS.find((p) => group.apiKey.includes(`copilot-provider-bridge.${p.id}.`));
+        const prov = catalogStore.get().providers.find((p) => group.apiKey.includes(`copilot-provider-bridge.${p.id}.`));
         const provId = prov?.id;
         const apiKey = provId ? keyMap.get(provId) : undefined;
 

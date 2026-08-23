@@ -135,17 +135,18 @@ const moduleScope = {
 const fn = new Function('module', 'exports', 'require', bundled);
 fn(moduleScope, moduleScope.exports, moduleScope.require);
 
-const providers = moduleScope.exports.PROVIDERS;
+const bundledCatalog = moduleScope.exports.mergeWithDefaults({});
+const providers = bundledCatalog.providers;
 const providerToConfig = moduleScope.exports.providerToConfig;
 const modelToConfig = moduleScope.exports.modelToConfig;
 const findGroupIndex = moduleScope.exports.findGroupIndex;
-const mcpPresets = moduleScope.exports.MCP_PRESETS;
 const mergeMcpConfig = moduleScope.exports.mergeMcpConfig;
-const getMcpPresetsForProvider = moduleScope.exports.getMcpPresetsForProvider;
+const mcpPresets = bundledCatalog.mcpPresets;
+const getMcpPresetsForProvider = (providerId) => mcpPresets.filter((p) => p.providerId === providerId);
 const getPieGlyph = moduleScope.exports.getPieGlyph;
 const formatCountdown = moduleScope.exports.formatCountdown;
 const UsageStatusBarManager = moduleScope.exports.UsageStatusBarManager;
-const VISION_BACKENDS = moduleScope.exports.VISION_BACKENDS;
+const VISION_BACKENDS = bundledCatalog.visionBackends;
 const CopilotProviderBridgeVisionTool = moduleScope.exports.CopilotProviderBridgeVisionTool;
 const Logger = moduleScope.exports.Logger;
 check('PROVIDERS array exported and has 7 active providers', Array.isArray(providers) && providers.length === 7, `length=${providers?.length}`);

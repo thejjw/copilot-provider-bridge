@@ -2,7 +2,7 @@
   "name": "copilot-provider-bridge",
   "displayName": "Copilot Provider Bridge",
   "description": "Enables VS Code Copilot AI features for users via their existing third-party AI coding plans and LLM subscriptions.",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "publisher": "thejjw",
   "license": "zlib-acknowledgement",
   "repository": {
@@ -53,7 +53,12 @@
     "onCommand:copilot-provider-bridge.runDiagnostics",
     "onCommand:copilot-provider-bridge.showDebugLogs",
     "onCommand:copilot-provider-bridge.toggleDebugLogging",
-    "onCommand:copilot-provider-bridge.resetConfiguration"
+    "onCommand:copilot-provider-bridge.resetConfiguration",
+    "onCommand:copilot-provider-bridge.customizeCatalog",
+    "onCommand:copilot-provider-bridge.openCatalogFile",
+    "onCommand:copilot-provider-bridge.reloadCatalog",
+    "onCommand:copilot-provider-bridge.migrateCatalog",
+    "onCommand:copilot-provider-bridge.resetCatalog"
   ],
   "contributes": {
     "configuration": {
@@ -163,6 +168,37 @@
         "command": "copilot-provider-bridge.resetConfiguration",
         "title": "Reset All Configuration & Clear Secrets",
         "category": "Copilot Provider Bridge"
+      },
+      {
+        "command": "copilot-provider-bridge.customizeCatalog",
+        "title": "Customize Provider Catalog (Editable Models & Endpoints)",
+        "category": "Copilot Provider Bridge"
+      },
+      {
+        "command": "copilot-provider-bridge.openCatalogFile",
+        "title": "Open Provider Catalog File",
+        "category": "Copilot Provider Bridge"
+      },
+      {
+        "command": "copilot-provider-bridge.reloadCatalog",
+        "title": "Reload Provider Catalog",
+        "category": "Copilot Provider Bridge"
+      },
+      {
+        "command": "copilot-provider-bridge.migrateCatalog",
+        "title": "Migrate Provider Catalog to Latest Defaults",
+        "category": "Copilot Provider Bridge"
+      },
+      {
+        "command": "copilot-provider-bridge.resetCatalog",
+        "title": "Reset Provider Catalog to Defaults (Delete Customizations)",
+        "category": "Copilot Provider Bridge"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "copilot-provider-bridge*.jsonc",
+        "url": "./schemas/copilot-provider-bridge.catalog.schema.json"
       }
     ],
     "icons": {
@@ -881,6 +917,7 @@
     "typecheck": "tsc --noEmit",
     "pretest": "npm run build",
     "test": "node scripts/smoke-test.mjs",
+    "test:unit": "vitest run",
     "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
@@ -888,6 +925,10 @@
     "@types/vscode": "~1.120.0",
     "@vscode/vsce": "^3.6.0",
     "esbuild": "^0.28.2",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.3.1"
   }
 }

@@ -1,13 +1,14 @@
 // Command to select/pin which multimodal model backend powers the built-in Vision Agent tool.
 
 import * as vscode from 'vscode';
-import { VISION_BACKENDS, type VisionBackendOption } from '../tools/visionTool';
+import { catalogStore } from '../catalog/store';
+import type { VisionBackendOption } from '../tools/visionBackends';
 
 export async function selectVisionModelCommand(context: vscode.ExtensionContext): Promise<void> {
   const currentId = context.globalState.get<string>('copilotProviderBridge.preferredVisionModel');
 
   const items = await Promise.all(
-    VISION_BACKENDS.map(async (b) => {
+    catalogStore.get().visionBackends.map(async (b) => {
       const isPinned = b.id === currentId;
       const key =
         (await context.secrets.get(`copilot-provider-bridge.${b.providerId}.apiKey`)) ??
