@@ -195,6 +195,12 @@
         "category": "Copilot Provider Bridge"
       }
     ],
+    "jsonValidation": [
+      {
+        "fileMatch": "copilot-provider-bridge*.jsonc",
+        "url": "./schemas/copilot-provider-bridge.catalog.schema.json"
+      }
+    ],
     "icons": {
       "copilot-provider-bridge-p0": {
         "description": "Quota remaining: 0%",

@@ -1,0 +1,160 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Copilot Provider Bridge - Provider Catalog",
+  "description": "User-editable provider catalog for Copilot Provider Bridge. While this file exists it overrides the bundled defaults; each present section fully replaces the defaults for that section.",
+  "type": "object",
+  "properties": {
+    "$version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Catalog schema version. Keep 1."
+    },
+    "providers": {
+      "type": "array",
+      "minItems": 1,
+      "description": "AI provider groups (endpoint + models). Present sections fully replace the bundled defaults; delete the key to fall back.",
+      "items": { "$ref": "#/definitions/provider" }
+    },
+    "visionBackends": {
+      "type": "array",
+      "description": "Multimodal backends used by the built-in Vision Agent tool to analyze images on behalf of text-only models. providerId must match a provider in the effective providers section.",
+      "items": { "$ref": "#/definitions/visionBackend" }
+    },
+    "mcpPresets": {
+      "type": "array",
+      "description": "Companion MCP server presets offered by 'Configure MCP Tools'. providerId must match a provider in the effective providers section.",
+      "items": { "$ref": "#/definitions/mcpPreset" }
+    }
+  },
+  "required": [],
+  "additionalProperties": true,
+  "definitions": {
+    "provider": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "description": "Stable identity; becomes part of the secret input name (copilot-provider-bridge.<id>.apiKey). Keep built-in ids (zai, deepseek, minimax, kimi, qwen, openrouter, nvidia) unchanged to retain usage/quota tracking."
+        },
+        "name": { "type": "string", "minLength": 1, "description": "Display name shown in QuickPicks and written as the group name in chatLanguageModels.json." },
+        "description": { "type": "string", "description": "Short description shown in QuickPick detail rows." },
+        "endpointUrl": { "type": "string", "format": "uri", "description": "Base endpoint URL for this provider (Anthropic Messages or OpenAI Chat Completions)." },
+        "apiType": { "type": "string", "enum": ["messages", "chat-completions"], "description": "Wire protocol used at endpointUrl." },
+        "secretInput": { "type": "string", "minLength": 1, "description": "Optional ${input:...} secret name. Defaults to copilot-provider-bridge.<id>.apiKey." },
+        "requestHeaders": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Auth headers sent with chat requests. Defaults to { \"Authorization\": \"Bearer ${apiKey}\" }. The literal ${apiKey} is replaced with the entered key."
+        },
+        "models": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/model" }
+        }
+      },
+      "required": ["id", "name", "endpointUrl", "apiType", "models"],
+      "additionalProperties": true
+    },
+    "model": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Wire-format model id sent to the upstream API." },
+        "name": { "type": "string", "minLength": 1, "description": "Display name in the VS Code model picker." },
+        "toolCalling": { "type": "boolean", "description": "Tool calling / function calling support." },
+        "vision": { "type": "boolean", "description": "Image / multimodal input support." },
+        "contextWindow": { "type": "integer", "minimum": 1, "description": "Total context window in tokens." },
+        "maxOutputTokens": { "type": "integer", "minimum": 1, "description": "Max generation tokens. Must be smaller than contextWindow." },
+        "maxInputTokens": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Derived as contextWindow - maxOutputTokens when omitted. If provided explicitly it must equal that difference."
+        },
+        "thinking": { "type": "boolean", "description": "Whether the model supports thinking / reasoning." },
+        "supportsReasoningEffort": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["low", "medium", "high", "max"] },
+          "uniqueItems": true,
+          "description": "Reasoning effort levels surfaced in the VS Code model picker."
+        },
+        "reasoningEffortFormat": { "type": "string", "enum": ["messages", "chat-completions", "responses"] },
+        "url": { "type": "string", "format": "uri", "description": "Model-level endpoint override (e.g. multimodal variant on a different endpoint)." },
+        "apiType": { "type": "string", "enum": ["messages", "chat-completions"], "description": "Model-level protocol override." },
+        "requestHeaders": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Model-level auth header override."
+        }
+      },
+      "required": ["id", "name", "toolCalling", "vision", "contextWindow", "maxOutputTokens"],
+      "additionalProperties": true
+    },
+    "visionBackend": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Stable backend id (persisted when pinned)." },
+        "name": { "type": "string", "minLength": 1 },
+        "providerId": { "type": "string", "minLength": 1, "description": "Provider whose API key is used for this backend." },
+        "description": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1, "description": "Wire-format model id sent to endpointUrl." },
+        "endpointUrl": { "type": "string", "format": "uri" },
+        "apiType": { "type": "string", "enum": ["openai", "anthropic"], "description": "Protocol used at endpointUrl." }
+      },
+      "required": ["id", "name", "providerId", "description", "model", "endpointUrl", "apiType"],
+      "additionalProperties": true
+    },
+    "mcpPreset": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1, "description": "Display name in the Configure MCP Tools QuickPick." },
+        "description": { "type": "string", "minLength": 1 },
+        "providerId": { "type": "string", "minLength": 1, "description": "Provider group this preset belongs to in the wizard." },
+        "serverKey": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Key under 'mcp.servers' in mcp.json. Must be unique across presets; Reset uses these keys to identify servers it manages."
+        },
+        "inputs": {
+          "type": "array",
+          "description": "Secret inputs resolved by VS Code when starting the server. May be empty for tools that need no key prompt.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "promptString" },
+              "id": { "type": "string", "minLength": 1 },
+              "description": { "type": "string", "minLength": 1 },
+              "password": { "type": "boolean", "const": true }
+            },
+            "required": ["type", "id", "description", "password"]
+          }
+        },
+        "server": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string", "enum": ["http", "sse"] },
+                "url": { "type": "string", "format": "uri" },
+                "headers": { "type": "object", "additionalProperties": { "type": "string" } }
+              },
+              "required": ["type", "url"]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string", "const": "stdio" },
+                "command": { "type": "string", "minLength": 1 },
+                "args": { "type": "array", "items": { "type": "string" } },
+                "env": { "type": "object", "additionalProperties": { "type": "string" } }
+              },
+              "required": ["type", "command"]
+            }
+          ]
+        }
+      },
+      "required": ["id", "name", "description", "providerId", "serverKey", "inputs", "server"],
+      "additionalProperties": true
+    }
+  }
+}
