@@ -2,11 +2,10 @@
 // for user-scoped BYOK (the location Custom Endpoint writes to without a GitHub sign-in).
 
 import * as fs from 'node:fs/promises';
-import { homedir } from 'node:os';
 import * as path from 'node:path';
-import * as vscode from 'vscode';
-import { EXTENSION_MARKER, PROVIDERS, type Provider, type ProviderId, type ProviderModel } from './providers';
+import { EXTENSION_MARKER, type Provider, type ProviderId, type ProviderModel } from './providers';
 import { Logger } from './utils/logger';
+import { catalogStore } from './catalog/store';
 
 /** A single model entry inside a provider's `models` array. */
 export interface ConfigModel {
@@ -40,24 +39,9 @@ export type ConfigFile = ConfigGroup[];
 // Marker we use to recognize groups we wrote. Defined in providers.ts (pure module);
 // re-exported here for the existing config-layer consumers.
 export { EXTENSION_MARKER };
-
-/** Detect "Code" vs "Code - Insiders" from the running editor's appRoot. */
-function codeFlavor(): string {
-  return /-insiders/i.test(vscode.env.appRoot) ? 'Code - Insiders' : 'Code';
-}
-
-/** Path to the user-scoped chatLanguageModels.json for the current platform. */
-export function userConfigPath(): string {
-  if (process.platform === 'win32') {
-    const base = process.env.APPDATA ?? path.join(homedir(), 'AppData', 'Roaming');
-    return path.join(base, codeFlavor(), 'User', 'chatLanguageModels.json');
-  }
-  if (process.platform === 'darwin') {
-    return path.join(homedir(), 'Library', 'Application Support', codeFlavor(), 'User', 'chatLanguageModels.json');
-  }
-  const base = process.env.XDG_CONFIG_HOME ?? path.join(homedir(), '.config');
-  return path.join(base, codeFlavor(), 'User', 'chatLanguageModels.json');
-}
+// Path helpers moved to utils/userPaths.ts (shared with the catalog store).
+import { userConfigPath } from './utils/userPaths';
+export { userConfigPath };
 
 /** Read the current config file safely. Strips UTF-8 BOM, returns [] if absent or empty, rethrows syntax errors. */
 export async function readConfig(): Promise<ConfigFile> {
@@ -135,11 +119,11 @@ export function findGroupIndex(cfg: ConfigFile, providerId: ProviderId): number 
   return cfg.findIndex(
     (g) =>
       g.apiKey.includes(`${EXTENSION_MARKER}${providerId}.`) ||
-      PROVIDERS.some((p) => p.id === providerId && g.name === p.name)
+      catalogStore.get().providers.some((p) => p.id === providerId && g.name === p.name)
   );
 }
 
 /** Returns true if any group in the file was written by this extension. */
 export function hasAnyBridgeGroup(cfg: ConfigFile): boolean {
-  return cfg.some((g) => g.apiKey.includes(EXTENSION_MARKER) || PROVIDERS.some((p) => g.name === p.name));
+  return cfg.some((g) => g.apiKey.includes(EXTENSION_MARKER) || catalogStore.get().providers.some((p) => g.name === p.name));
 }

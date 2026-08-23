@@ -5,7 +5,10 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { parse as parseJsonc, type ParseError } from 'jsonc-parser';
+// Deep-import the ESM build: the package "main" is a UMD wrapper whose bare
+// `factory(require, ...)` call esbuild cannot rewrite, which breaks at runtime
+// once bundled (require("./impl/format") resolves against dist/).
+import { parse as parseJsonc, type ParseError } from 'jsonc-parser/lib/esm/main.js';
 import type { Provider, ProviderModel } from '../providers';
 import type { McpInputDefinition, McpPreset, McpServerDefinition } from '../mcpCatalog';
 import type { VisionBackendOption } from '../tools/visionTool';

@@ -1,11 +1,8 @@
 import * as vscode from 'vscode';
-import { PROVIDERS, type Provider } from '../providers';
+import type { Provider } from '../providers';
+import { catalogStore } from '../catalog/store';
 import { findGroupIndex, providerToConfig, readConfig, writeConfig, userConfigPath } from '../config';
-import {
-  getMcpPresetsForProvider,
-  mergeMcpConfig,
-  type McpPreset,
-} from '../mcpCatalog';
+import { mergeMcpConfig, type McpPreset } from '../mcpCatalog';
 import { readMcpFile, userMcpConfigPath, workspaceMcpConfigPath, writeMcpFile } from './addMcp';
 import { Logger } from '../utils/logger';
 
@@ -90,7 +87,7 @@ export async function quickSetupCommand(context?: vscode.ExtensionContext): Prom
 
   // Step 1: Select Providers
   const providerPicks = await vscode.window.showQuickPick(
-    PROVIDERS.map((p) => ({
+    catalogStore.get().providers.map((p) => ({
       label: p.name,
       description: `${p.models.length} verified model${p.models.length === 1 ? '' : 's'} (${p.apiType})`,
       detail: p.description,
@@ -226,7 +223,7 @@ export async function quickSetupCommand(context?: vscode.ExtensionContext): Prom
   // Step 4: Check for companion MCP tools for validated providers
   const companionMcpPresets: McpPreset[] = [];
   for (const p of validatedProviders) {
-    const presets = getMcpPresetsForProvider(p.id);
+    const presets = catalogStore.get().mcpPresets.filter((preset) => preset.providerId === p.id);
     companionMcpPresets.push(...presets);
   }
 

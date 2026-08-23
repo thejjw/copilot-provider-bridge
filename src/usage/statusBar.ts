@@ -15,6 +15,7 @@ import {
 } from './fetchers';
 import { getDatatypeIcon, getPieGlyph, type UsageReport, type UsageStatus } from './types';
 import { readConfig } from '../config';
+import { catalogStore } from '../catalog/store';
 import { Logger } from '../utils/logger';
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -206,17 +207,22 @@ export class UsageStatusBarManager {
       // (e.g. "${input:copilot-provider-bridge.kimi.apiKey}"), falling back to the exact
       // catalog display name. Substring name matching was dropped: it false-positives on
       // user-created groups that merely mention a provider name.
-      const findGroup = (providerId: string, displayName: string) =>
-        config.find(
-          (g) => g.apiKey.includes(`copilot-provider-bridge.${providerId}.`) || g.name === displayName
+      const findGroup = (providerId: string) => {
+        // Marker prefix first (stable identity), then exact display name from the
+        // effective catalog so user-renamed providers still match after a rename.
+        const marker = `copilot-provider-bridge.${providerId}.`;
+        const displayName = catalogStore.get().providers.find((p) => p.id === providerId)?.name;
+        return config.find(
+          (g) => g.apiKey.includes(marker) || (displayName !== undefined && g.name === displayName)
         );
+      };
 
-      const zaiGroup = findGroup('zai', 'Z.ai GLM Coding Plan');
-      const dsGroup = findGroup('deepseek', 'DeepSeek');
-      const mmGroup = findGroup('minimax', 'MiniMax');
-      const kimiGroup = findGroup('kimi', 'Kimi Code Plan');
-      const orGroup = findGroup('openrouter', 'OpenRouter');
-      const nvidiaGroup = findGroup('nvidia', 'NVIDIA NIM');
+      const zaiGroup = findGroup('zai');
+      const dsGroup = findGroup('deepseek');
+      const mmGroup = findGroup('minimax');
+      const kimiGroup = findGroup('kimi');
+      const orGroup = findGroup('openrouter');
+      const nvidiaGroup = findGroup('nvidia');
 
       const zaiKey =
         (await this.context.secrets.get('copilot-provider-bridge.zai.apiKey')) ??

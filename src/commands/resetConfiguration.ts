@@ -5,10 +5,9 @@
 
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
-import { PROVIDERS } from '../providers';
 import { readConfig, writeConfig, userConfigPath } from '../config';
+import { catalogStore } from '../catalog/store';
 import { readMcpFile, userMcpConfigPath, workspaceMcpConfigPath, writeMcpFile } from './addMcp';
-import { MCP_PRESETS } from '../mcpCatalog';
 import { Logger } from '../utils/logger';
 
 export interface ResetOptions {
@@ -25,7 +24,7 @@ export async function resetCopilotProviderBridgeState(
 
   // 1. Clear Extension Secrets
   let clearedSecretsCount = 0;
-  for (const p of PROVIDERS) {
+  for (const p of catalogStore.get().providers) {
     const secretKey = `copilot-provider-bridge.${p.id}.apiKey`;
     await context.secrets.delete(secretKey);
     clearedSecretsCount++;
@@ -51,7 +50,7 @@ export async function resetCopilotProviderBridgeState(
           const filtered = parsed.filter(
             (g) =>
               !g.apiKey?.includes('copilot-provider-bridge.') &&
-              !PROVIDERS.some((p) => g.name === p.name)
+              !catalogStore.get().providers.some((p) => g.name === p.name)
           );
           await fs.writeFile(targetConfig, JSON.stringify(filtered, null, 2) + '\n', 'utf8');
           Logger.info(`Cleaned chatLanguageModels.json at ${targetConfig}`);
@@ -68,8 +67,9 @@ export async function resetCopilotProviderBridgeState(
     ...(workspaceMcpConfigPath() ? [workspaceMcpConfigPath()!] : []),
   ];
 
-  const knownMcpKeys = new Set(MCP_PRESETS.map((p) => p.serverKey));
-  const knownInputIds = new Set(MCP_PRESETS.flatMap((p) => p.inputs.map((i) => i.id)));
+  const effectivePresets = catalogStore.get().mcpPresets;
+  const knownMcpKeys = new Set(effectivePresets.map((p) => p.serverKey));
+  const knownInputIds = new Set(effectivePresets.flatMap((p) => p.inputs.map((i) => i.id)));
 
   for (const p of targetMcpPaths) {
     try {

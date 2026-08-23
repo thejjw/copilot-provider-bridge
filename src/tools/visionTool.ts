@@ -5,112 +5,13 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import type { ProviderId } from '../providers';
+import { catalogStore } from '../catalog/store';
 
-export interface VisionBackendOption {
-  id: string;
-  name: string;
-  providerId: ProviderId;
-  description: string;
-  model: string;
-  endpointUrl: string;
-  apiType: 'openai' | 'anthropic';
-}
+import type { VisionBackendOption } from './visionBackends';
 
-export const VISION_BACKENDS: VisionBackendOption[] = [
-  {
-    id: 'glm-4.6v',
-    name: 'GLM-4.6V (Z.ai Vision)',
-    providerId: 'zai',
-    description: 'Z.ai internal vision model for diagram understanding and OCR.',
-    model: 'glm-4.6v',
-    endpointUrl: 'https://api.z.ai/api/coding/paas/v4/chat/completions',
-    apiType: 'openai',
-  },
-  {
-    id: 'glm-5v-turbo',
-    name: 'GLM-5V-Turbo (Z.ai Multimodal)',
-    providerId: 'zai',
-    description: 'Z.ai frontier multimodal coding model.',
-    model: 'glm-5v-turbo',
-    endpointUrl: 'https://api.z.ai/api/coding/paas/v4/chat/completions',
-    apiType: 'openai',
-  },
-  /*
-  // Google Gemini (Disabled for now)
-  {
-    id: 'gemini-2.5-flash',
-    name: 'Gemini 2.5 Flash (Google High-Speed Vision)',
-    providerId: 'gemini',
-    description: 'Google high-speed multimodal model with 1M context.',
-    model: 'gemini-2.5-flash',
-    endpointUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    apiType: 'openai',
-  },
-  {
-    id: 'gemini-3.7-flash',
-    name: 'Gemini 3.7 Flash (Google Multimodal)',
-    providerId: 'gemini',
-    description: 'Google latest flagship fast multimodal model.',
-    model: 'gemini-3.7-flash',
-    endpointUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    apiType: 'openai',
-  },
-  */
-  {
-    id: 'deepseek-v4-flash-vision-exp',
-    name: 'DeepSeek V4 Flash Vision (Exp)',
-    providerId: 'deepseek',
-    description: 'DeepSeek multimodal model matching V4 Flash text capability.',
-    model: 'deepseek-v4-flash-vision-exp',
-    endpointUrl: 'https://api.deepseek.com/anthropic/v1/messages',
-    apiType: 'anthropic',
-  },
-  {
-    id: 'minimax-m3',
-    name: 'MiniMax M3 (MiniMax Vision)',
-    providerId: 'minimax',
-    description: 'MiniMax M3 multimodal model with 1M context.',
-    model: 'MiniMax-M3',
-    endpointUrl: 'https://api.minimax.io/v1/chat/completions',
-    apiType: 'openai',
-  },
-  {
-    id: 'kimi-k3',
-    name: 'Kimi K3 (Moonshot Vision)',
-    providerId: 'kimi',
-    description: 'Kimi K3 multimodal model with 1M context.',
-    model: 'k3',
-    endpointUrl: 'https://api.kimi.com/coding/v1/messages',
-    apiType: 'anthropic',
-  },
-  {
-    id: 'qwen3.8-max',
-    name: 'Qwen 3.8 Max (Alibaba Vision)',
-    providerId: 'qwen',
-    description: 'Qwen 3.8 Max flagship multimodal model.',
-    model: 'qwen3.8-max',
-    endpointUrl: 'https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic/v1/messages',
-    apiType: 'anthropic',
-  },
-  {
-    id: 'meta/muse-glimmer-30b',
-    name: 'Muse Glimmer 30B (NVIDIA NIM Vision)',
-    providerId: 'nvidia',
-    description: 'Meta Muse Glimmer 30B multimodal vision model on NVIDIA NIM.',
-    model: 'meta/muse-glimmer-30b',
-    endpointUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',
-    apiType: 'openai',
-  },
-  {
-    id: 'thinkingmachines/inkling',
-    name: 'Inkling (NVIDIA NIM Vision & Reasoning)',
-    providerId: 'nvidia',
-    description: 'Thinking Machines Inkling multimodal model on NVIDIA NIM.',
-    model: 'thinkingmachines/inkling',
-    endpointUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',
-    apiType: 'openai',
-  },
-];
+// Backend data lives in the pure module tools/visionBackends.ts (no vscode/store
+// imports); re-exported here for existing consumers.
+export { VISION_BACKENDS, type VisionBackendOption } from './visionBackends';
 
 export interface VisionToolInput {
   file_path?: string;
@@ -137,7 +38,7 @@ export class CopilotProviderBridgeVisionTool implements vscode.LanguageModelTool
 
     // If preferred backend exists and has key, use it
     if (preferredId) {
-      const match = VISION_BACKENDS.find((b) => b.id === preferredId);
+      const match = catalogStore.get().visionBackends.find((b) => b.id === preferredId);
       if (match) {
         const key = await getKey(match.providerId);
         if (key) return { backend: match, apiKey: key };
@@ -145,7 +46,7 @@ export class CopilotProviderBridgeVisionTool implements vscode.LanguageModelTool
     }
 
     // Otherwise, find first backend with an available key
-    for (const b of VISION_BACKENDS) {
+    for (const b of catalogStore.get().visionBackends) {
       const key = await getKey(b.providerId);
       if (key) return { backend: b, apiKey: key };
     }

@@ -12,10 +12,12 @@ import { selectVisionModelCommand } from './commands/selectVisionModel';
 import { runDiagnosticsCommand } from './commands/diagnostics';
 import { UsageStatusBarManager } from './usage/statusBar';
 import { resetConfigurationCommand } from './commands/resetConfiguration';
-import { CopilotProviderBridgeVisionTool, VISION_BACKENDS } from './tools/visionTool';
+import { CopilotProviderBridgeVisionTool } from './tools/visionTool';
+import { catalogStore } from './catalog/store';
 import { Logger } from './utils/logger';
 
-export { PROVIDERS, type Provider, type ProviderId, type ProviderModel } from './providers';
+export { catalogStore, mergeWithDefaults, type EffectiveCatalog } from './catalog/store';
+export { CATALOG_FILE_NAME, CATALOG_SCHEMA_VERSION, type CatalogFileSections } from './catalog/catalogFile';
 export {
   modelToConfig,
   providerToConfig,
@@ -29,9 +31,7 @@ export {
   type ConfigFile,
 } from './config';
 export {
-  MCP_PRESETS,
   mergeMcpConfig,
-  getMcpPresetsForProvider,
   type McpPreset,
   type McpConfigFile,
   type McpInputDefinition,
@@ -44,13 +44,17 @@ export { runDiagnosticsCommand } from './commands/diagnostics';
 export { UsageStatusBarManager } from './usage/statusBar';
 export { resetConfigurationCommand, resetCopilotProviderBridgeState } from './commands/resetConfiguration';
 export { getPieGlyph, formatCountdown, type UsageReport } from './usage/types';
-export { CopilotProviderBridgeVisionTool, VISION_BACKENDS } from './tools/visionTool';
+export { CopilotProviderBridgeVisionTool, type VisionBackendOption } from './tools/visionTool';
+export { VISION_BACKENDS } from './tools/visionBackends';
 export { Logger } from './utils/logger';
 
 export function activate(context: vscode.ExtensionContext): void {
   // Initialize Logger
   Logger.initialize(context);
   Logger.debug('Activating Copilot Provider Bridge extension...');
+
+  // Load the user-editable catalog (falls back to bundled defaults) and start watching it.
+  void catalogStore.init(context);
 
   // Initialize status bar usage manager
   const statusBarManager = new UsageStatusBarManager(context);

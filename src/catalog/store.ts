@@ -2,10 +2,8 @@
 // the bundled defaults, watches the file for changes, and exposes the merged
 // view plus a change event. All consumers read the catalog through this store
 // instead of importing the bundled constants directly.
-
+import { userSettingsDir } from '../utils/userPaths';
 import * as vscode from 'vscode';
-import * as path from 'node:path';
-import { userConfigPath } from '../config';
 import { Logger } from '../utils/logger';
 import { DEFAULT_MCP_PRESETS, DEFAULT_PROVIDERS, DEFAULT_VISION_BACKENDS } from './defaults';
 import {
@@ -44,11 +42,22 @@ export interface ReloadOutcome {
 
 class CatalogStore {
   private current: EffectiveCatalog = mergeWithDefaults({});
-  private readonly emitter = new vscode.EventEmitter<void>();
-  /** Fires whenever the effective catalog changed (file saved, created, or deleted). */
-  readonly onDidChange = this.emitter.event;
+  private _emitter?: vscode.EventEmitter<void>;
   private debounce?: NodeJS.Timeout;
 
+  /**
+   * Lazily created: constructing this module must not require an active VS Code
+   * host (smoke tests import the bundle headlessly).
+   */
+  private get emitter(): vscode.EventEmitter<void> {
+    if (!this._emitter) this._emitter = new vscode.EventEmitter<void>();
+    return this._emitter;
+  }
+
+  /** Fires whenever the effective catalog changed (file saved, created, or deleted). */
+  get onDidChange(): vscode.Event<void> {
+    return this.emitter.event;
+  }
   /** Current effective catalog (defaults overlaid with validated file sections). */
   get(): EffectiveCatalog {
     return this.current;
@@ -56,7 +65,7 @@ class CatalogStore {
 
   /** Absolute path of the user-editable catalog file (public seam for catalog commands). */
   filePath(): string {
-    return catalogPathFor(path.dirname(userConfigPath()));
+    return catalogPathFor(userSettingsDir());
   }
 
   /** Re-read the catalog file. On errors the last-good catalog is kept. */
@@ -96,7 +105,7 @@ class CatalogStore {
 
   /** Resolve the file path, register the watcher, and perform the initial load. */
   async init(context: vscode.ExtensionContext): Promise<void> {
-    const dir = path.dirname(userConfigPath());
+    const dir = userSettingsDir();
     const watcher = vscode.workspace.createFileSystemWatcher(
       new vscode.RelativePattern(vscode.Uri.file(dir), CATALOG_FILE_NAME)
     );

@@ -3,7 +3,8 @@
 // and outputs a detailed diagnostic report to the Output Channel.
 
 import * as vscode from 'vscode';
-import { PROVIDERS, type ProviderId } from '../providers';
+import type { ProviderId } from '../providers';
+import { catalogStore } from '../catalog/store';
 import { readConfig } from '../config';
 import { Logger } from '../utils/logger';
 
@@ -31,7 +32,7 @@ export async function runDiagnosticsCommand(context: vscode.ExtensionContext): P
       progress.report({ message: 'Checking API keys in SecretStorage & Environment...' });
       const keyMap = new Map<ProviderId, string>();
 
-      for (const p of PROVIDERS) {
+      for (const p of catalogStore.get().providers) {
         const secretKey = `copilot-provider-bridge.${p.id}.apiKey`;
         const secretVal = await context.secrets.get(secretKey);
         const envVal = process.env[`${p.id.toUpperCase()}_API_KEY`];
@@ -51,7 +52,7 @@ export async function runDiagnosticsCommand(context: vscode.ExtensionContext): P
       let failCount = 0;
 
       for (const group of cfg) {
-        const prov = PROVIDERS.find((p) => group.apiKey.includes(`copilot-provider-bridge.${p.id}.`));
+        const prov = catalogStore.get().providers.find((p) => group.apiKey.includes(`copilot-provider-bridge.${p.id}.`));
         const provId = prov?.id;
         const apiKey = provId ? keyMap.get(provId) : undefined;
 

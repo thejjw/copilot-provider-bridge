@@ -3,7 +3,9 @@
 
 import { PROVIDERS } from '../providers';
 import { MCP_PRESETS } from '../mcpCatalog';
-import { VISION_BACKENDS } from '../tools/visionTool';
+// Import from the pure data module, NOT tools/visionTool (which imports the
+// store and would create a module cycle).
+import { VISION_BACKENDS } from '../tools/visionBackends';
 
 export const DEFAULT_PROVIDERS = PROVIDERS;
 export const DEFAULT_VISION_BACKENDS = VISION_BACKENDS;
