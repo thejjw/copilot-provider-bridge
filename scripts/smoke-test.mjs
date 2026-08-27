@@ -291,8 +291,12 @@ check('Kimi kimi-for-coding-highspeed thinking is true', kimiHighSpeed?.thinking
 // Qwen check
 const qwenGroup = providerToConfig(providers.find((p) => p.id === 'qwen'), providers.find((p) => p.id === 'qwen').models);
 check('qwen3.7-max is removed', !qwenGroup.models.some((m) => m.id === 'qwen3.7-max'));
+check('qwen3.7-plus is removed', !qwenGroup.models.some((m) => m.id === 'qwen3.7-plus'));
 check('qwen3.8-max is present', qwenGroup.models.some((m) => m.id === 'qwen3.8-max'));
-
+check('qwen3.8-flash is present', qwenGroup.models.some((m) => m.id === 'qwen3.8-flash'));
+const qwenFlash = qwenGroup.models.find((m) => m.id === 'qwen3.8-flash');
+check('qwen3.8-flash has vision and thinking enabled', qwenFlash?.vision === true && qwenFlash?.thinking === true);
+check('qwen3.8-flash contextWindow sum is 1,000,000', qwenFlash?.maxInputTokens + qwenFlash?.maxOutputTokens === 1000000);
 // Google Gemini check (disabled for now)
 check('Google Gemini is disabled in active PROVIDERS list', !providers.some((p) => p.id === 'gemini'));
 // OpenRouter checks (generic auto and free router models only)

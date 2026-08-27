@@ -28,7 +28,7 @@ Enables **VS Code Copilot AI features** for users via existing third-party AI co
 | **Kimi** | Code Plan (Sub) | Anthropic | `https://api.kimi.com/coding/v1/messages` | `kimi-for-coding` | 262,144 (256K) | 65,536 (64K) | Forced Thinking | Yes |
 | **Kimi** | Code Plan (Sub) | Anthropic | `https://api.kimi.com/coding/v1/messages` | `kimi-for-coding-highspeed` | 262,144 (256K) | 65,536 (64K) | Forced Thinking (6× Speed) | Yes |
 | **Qwen Token Plan** | Token Plan (Sub) | Anthropic | `https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic/v1/messages` | `qwen3.8-max` | 1,000,000 (1M) | 131,072 (128K) | `low`, `medium`, `high` | Yes |
-| **Qwen Token Plan** | Token Plan (Sub) | Anthropic | `https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic/v1/messages` | `qwen3.7-plus` | 262,144 (256K) | 32,768 (32K) | `low`, `medium`, `high` | Yes |
+| **Qwen Token Plan** | Token Plan (Sub) | Anthropic | `https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic/v1/messages` | `qwen3.8-flash` | 1,000,000 (1M) | 131,072 (128K) | `low`, `medium`, `high` | Yes |
 | **Qwen Token Plan** | Token Plan (Sub) | Anthropic | `https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic/v1/messages` | `qwen3.6-flash` | 128,000 (128K) | 16,384 (16K) | No | No |
 | ~~**Google Gemini**~~ | ~~*Top-up / Payg*~~ | ~~*OpenAI*~~ | ~~`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`~~ | ~~`gemini-3.7-flash`, `gemini-2.5-flash`~~ | ~~1M~~ | ~~64K~~ | *Disabled for now — requires Google AI Studio billing quota* | ~~Yes~~ |
 | **OpenRouter** | Router / Payg / Free | OpenAI | `https://openrouter.ai/api/v1/chat/completions` | `openrouter/free` (Zero-cost), `openrouter/auto` | 128K–200K | 16K | `low`, `medium`, `high` (auto) | Yes |
@@ -80,7 +80,7 @@ Copilot Provider Bridge configures models and tools for VS Code's native BYOK en
 
 ### 2. Vision & Multimodal Inputs (Text-Only vs. Multimodal Models)
 - **Native Multimodal Models (`vision: true`)**:
-  - Models like `glm-5.3-flash`, `glm-5v-turbo`, `MiniMax-M3`, `k3`, `qwen3.8-max`, `qwen3.7-plus`, `gemini-3.7-flash`, `gemini-2.5-pro`, and `gemini-2.5-flash` natively support image inputs.
+  - Models like `glm-5.3-flash`, `glm-5v-turbo`, `MiniMax-M3`, `k3`, `qwen3.8-max`, `qwen3.8-flash`, `gemini-3.7-flash`, `gemini-2.5-pro`, and `gemini-2.5-flash` natively support image inputs.
   - You can drag-and-drop screenshots, mockups, and images directly into the chat prompt. The image payload is forwarded directly to the provider's multimodal endpoint.
 - **Text-Only Coding Models (`vision: false`) + Vision Agent Tool**:
   - Frontier coding models like `glm-5.3`, `glm-4.7`, `deepseek-v4-pro`, `deepseek-v4-flash`, and `qwen3.6-flash` are text-specialized.
