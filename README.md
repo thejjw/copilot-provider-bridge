@@ -18,6 +18,7 @@ Enables **VS Code Copilot AI features** for users via existing third-party AI co
 | Provider | Plan Type | Protocol | Endpoint | Models | Context Window | Max Output | Thinking? | Vision? |
 |---|---|---|---|---|---|---|---|---|
 | **Z.ai GLM** | Coding Plan (Sub) | Anthropic | `https://api.z.ai/api/anthropic/v1/messages` | `glm-5.3` | 1,000,000 (1M) | 131,072 (128K) | `low`, `high`, `max` | No |
+| **Z.ai GLM** | Coding Plan (Sub) | Anthropic | `https://api.z.ai/api/anthropic/v1/messages` | `glm-5.3-flash` | 1,000,000 (1M) | 131,072 (128K) | `low`, `high`, `max` | Yes |
 | **Z.ai GLM** | Coding Plan (Sub) | Anthropic | `https://api.z.ai/api/anthropic/v1/messages` | `glm-4.7` | 202,752 (~200K) | 65,535 (64K) | Forced Thinking | No |
 | **Z.ai GLM** | Coding Plan (Sub) | OpenAI | `https://api.z.ai/api/coding/paas/v4/chat/completions` | `glm-5v-turbo` | 202,752 (~200K) | 131,072 (128K) | Dynamic Thinking | Yes |
 | **DeepSeek** | Top-up / Payg | Anthropic | `https://api.deepseek.com/anthropic/v1/messages` | `deepseek-v4-pro`, `deepseek-v4-flash` | 1,000,000 (1M) | 393,216 (384K) | `low`, `medium`, `high` | No |
@@ -41,6 +42,7 @@ When using a text-only model (like `GLM-5.3` or `DeepSeek V4 Pro`), the built-in
 |---|---|---|---|
 | **GLM-4.6V** | Z.ai | OpenAI Chat | Dedicated OCR and diagram analysis model |
 | **GLM-5V-Turbo** | Z.ai | OpenAI Chat | Frontier multimodal coding foundation model |
+| **GLM-5.3-Flash** | Z.ai | OpenAI Chat | Frontier native multimodal hybrid model with 1M context |
 | ~~**Gemini 2.5 Flash**~~ | ~~Google~~ | ~~OpenAI Chat~~ | *Disabled for now — requires Google AI Studio billing quota* |
 | ~~**Gemini 3.7 Flash**~~ | ~~Google~~ | ~~OpenAI Chat~~ | *Disabled for now — requires Google AI Studio billing quota* |
 | **MiniMax M3** | MiniMax | OpenAI Chat | 1M context multimodal model |
@@ -78,7 +80,7 @@ Copilot Provider Bridge configures models and tools for VS Code's native BYOK en
 
 ### 2. Vision & Multimodal Inputs (Text-Only vs. Multimodal Models)
 - **Native Multimodal Models (`vision: true`)**:
-  - Models like `glm-5v-turbo`, `MiniMax-M3`, `k3`, `qwen3.8-max`, `qwen3.7-plus`, `gemini-3.7-flash`, `gemini-2.5-pro`, and `gemini-2.5-flash` natively support image inputs.
+  - Models like `glm-5.3-flash`, `glm-5v-turbo`, `MiniMax-M3`, `k3`, `qwen3.8-max`, `qwen3.7-plus`, `gemini-3.7-flash`, `gemini-2.5-pro`, and `gemini-2.5-flash` natively support image inputs.
   - You can drag-and-drop screenshots, mockups, and images directly into the chat prompt. The image payload is forwarded directly to the provider's multimodal endpoint.
 - **Text-Only Coding Models (`vision: false`) + Vision Agent Tool**:
   - Frontier coding models like `glm-5.3`, `glm-4.7`, `deepseek-v4-pro`, `deepseek-v4-flash`, and `qwen3.6-flash` are text-specialized.

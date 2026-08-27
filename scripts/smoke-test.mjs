@@ -25,7 +25,7 @@
 //      - Asserts status bar text is ultra-minimal (only single pie glyph or balance number).
 //      - Asserts hover tooltip renders all details and error messages.
 //   5. Vision Agent Tool & Backends:
-//      - Asserts VISION_BACKENDS has 8 backends (GLM-4.6V, GLM-5V-Turbo, Gemini Flash/Pro, DeepSeek V4 Flash Vision Exp, MiniMax M3, Kimi K3, Qwen 3.8 Max, NVIDIA NIM).
+//      - Asserts VISION_BACKENDS has 9 backends (GLM-4.6V, GLM-5V-Turbo, GLM-5.3-Flash, Gemini Flash/Pro, DeepSeek V4 Flash Vision Exp, MiniMax M3, Kimi K3, Qwen 3.8 Max, NVIDIA NIM).
 //      - Asserts CopilotProviderBridgeVisionTool.toolId is provider_bridge_analyze_visual.
 //      - Asserts tool resolution falls back gracefully when keys are missing or preferred is selected.
 //   6. Packaged .vsix existence and non-zero size.
@@ -196,7 +196,7 @@ for (const p of providers) {
     check(`[${p.id}/${cfgM.id}] apiType is valid`, cfgM.apiType === 'messages' || cfgM.apiType === 'chat-completions');
   }
 }
-check('total models verified across all active providers', totalModelsChecked === 22, `total=${totalModelsChecked}`);
+check('total models verified across all active providers', totalModelsChecked === 23, `total=${totalModelsChecked}`);
 
 const testCfg = [providerToConfig(providers[0], [providers[0].models[0]], 'old-key')];
 const existingIdx = findGroupIndex(testCfg, providers[0].id);
@@ -216,6 +216,18 @@ check('GLM-5.3 reasoning effort levels are explicitly [low, high, max]',
 check('GLM-5.3 thinking is true', glm53?.thinking === true);
 check('GLM-5.3 vision is false', glm53?.vision === false);
 
+
+// Z.ai GLM-5.3-Flash multimodal check (must have vision: true, 1M context, 128K max output, thinking [low, high, max])
+const glm53Flash = zaiGroup.models.find((m) => m.id === 'glm-5.3-flash');
+check('GLM-5.3-Flash reasoning effort levels are explicitly [low, high, max]',
+  JSON.stringify(glm53Flash?.supportsReasoningEffort) === JSON.stringify(['low', 'high', 'max']),
+  JSON.stringify(glm53Flash?.supportsReasoningEffort)
+);
+check('GLM-5.3-Flash thinking is true', glm53Flash?.thinking === true);
+check('GLM-5.3-Flash vision is true', glm53Flash?.vision === true);
+check('GLM-5.3-Flash maxOutputTokens is 131,072', glm53Flash?.maxOutputTokens === 131072);
+check('GLM-5.3-Flash maxInputTokens is 868,928', glm53Flash?.maxInputTokens === 868928);
+check('GLM-5.3-Flash sum is 1,000,000', glm53Flash?.maxInputTokens + glm53Flash?.maxOutputTokens === 1000000);
 // Z.ai GLM-4.7 thinking check (forced thinking: thinking true, but NO reasoning_effort controls)
 const glm47 = zaiGroup.models.find((m) => m.id === 'glm-4.7');
 check('GLM-4.7 thinking is true', glm47?.thinking === true);
@@ -494,7 +506,8 @@ await sbManager.setPinnedProvider('gemini');
 check('no-metric model status bar text is strictly "Copilot-Provider-Bridge"', mockStatusBarItem.text === 'Copilot-Provider-Bridge', `got "${mockStatusBarItem.text}"`);
 
 console.log('\n-- 6. Vision Agent Tool & Backends --');
-check('VISION_BACKENDS exported and has 8 options', Array.isArray(VISION_BACKENDS) && VISION_BACKENDS.length === 8, `length=${VISION_BACKENDS?.length}`);
+check('VISION_BACKENDS exported and has 9 options', Array.isArray(VISION_BACKENDS) && VISION_BACKENDS.length === 9, `length=${VISION_BACKENDS?.length}`);
+check('GLM-5.3-Flash backend present (openai apiType)', VISION_BACKENDS.some((b) => b.id === 'glm-5.3-flash' && b.apiType === 'openai'));
 check('DeepSeek V4 Flash Vision Exp backend present (anthropic apiType)', VISION_BACKENDS.some((b) => b.id === 'deepseek-v4-flash-vision-exp' && b.apiType === 'anthropic'));
 check('CopilotProviderBridgeVisionTool.toolId is provider_bridge_analyze_visual', CopilotProviderBridgeVisionTool.toolId === 'provider_bridge_analyze_visual');
 // Check package.json contribution fields

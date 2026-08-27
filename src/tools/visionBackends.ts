@@ -32,6 +32,15 @@ export const VISION_BACKENDS: VisionBackendOption[] = [
     endpointUrl: 'https://api.z.ai/api/coding/paas/v4/chat/completions',
     apiType: 'openai',
   },
+  {
+    id: 'glm-5.3-flash',
+    name: 'GLM-5.3-Flash (Z.ai Multimodal)',
+    providerId: 'zai',
+    description: 'Z.ai frontier native multimodal hybrid model with 1M context.',
+    model: 'glm-5.3-flash',
+    endpointUrl: 'https://api.z.ai/api/coding/paas/v4/chat/completions',
+    apiType: 'openai',
+  },
   /*
   // Google Gemini (Disabled for now)
   {
