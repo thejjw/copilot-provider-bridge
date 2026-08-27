@@ -2,7 +2,7 @@
   "name": "copilot-provider-bridge",
   "displayName": "Copilot Provider Bridge",
   "description": "Enables VS Code Copilot AI features for users via their existing third-party AI coding plans and LLM subscriptions.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "publisher": "thejjw",
   "license": "zlib-acknowledgement",
   "repository": {
