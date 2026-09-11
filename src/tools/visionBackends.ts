@@ -63,11 +63,11 @@ export const VISION_BACKENDS: VisionBackendOption[] = [
   },
   */
   {
-    id: 'deepseek-v4-flash-vision-exp',
-    name: 'DeepSeek V4 Flash Vision (Exp)',
+    id: 'deepseek-flash',
+    name: 'DeepSeek Flash',
     providerId: 'deepseek',
-    description: 'DeepSeek multimodal model matching V4 Flash text capability.',
-    model: 'deepseek-v4-flash-vision-exp',
+    description: 'DeepSeek multimodal model with 1M context.',
+    model: 'deepseek-flash',
     endpointUrl: 'https://api.deepseek.com/anthropic/v1/messages',
     apiType: 'anthropic',
   },
