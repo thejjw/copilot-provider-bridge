@@ -131,11 +131,14 @@ The entire model catalog — providers, endpoints, token limits, vision backends
 To maintain and audit model specifications against upstream directories:
 
 ```bash
-# Audit bundled providers against models.dev and print diffs of new models or changed limits
+# Audit curated coding plan providers (zai, minimax, kimi, qwen, deepseek)
 npm run catalog:audit
 
-# Audit a specific provider (e.g. zai, minimax, kimi, qwen, deepseek, openrouter, nvidia)
-npm run catalog:audit -- --provider zai
+# Include large aggregator providers (openrouter, nvidia with hundreds of models)
+npm run catalog:audit -- --all
+
+# Audit a specific provider explicitly (bypasses default opt-in exclusions)
+npm run catalog:audit -- --provider openrouter
 
 # Audit and print ready-to-paste TypeScript snippets for src/providers.ts
 npm run catalog:audit -- --snippets
