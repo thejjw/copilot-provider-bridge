@@ -59,8 +59,9 @@ export interface ProviderSlugMapping {
   modelIdPrefix?: string;
   /** Optional regex filter */
   modelIdRegex?: RegExp;
+  /** Whether to exclude from default audit runs due to high model count (aggregators like OpenRouter, NVIDIA) */
+  optInOnly?: boolean;
 }
-
 export const KNOWN_MODELS_DEV_MAPPINGS: ProviderSlugMapping[] = [
   {
     providerId: 'zai',
@@ -86,10 +87,12 @@ export const KNOWN_MODELS_DEV_MAPPINGS: ProviderSlugMapping[] = [
   {
     providerId: 'openrouter',
     modelsDevSlug: 'openrouter',
+    optInOnly: true,
   },
   {
     providerId: 'nvidia',
     modelsDevSlug: 'nvidia',
+    optInOnly: true,
   },
 ];
 

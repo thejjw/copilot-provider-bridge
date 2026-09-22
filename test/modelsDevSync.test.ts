@@ -7,9 +7,9 @@ import {
   isChatModel,
   mapModelsDevToProviderModel,
   compareProviderModels,
+  KNOWN_MODELS_DEV_MAPPINGS,
   type ModelsDevModel,
 } from '../src/catalog/modelsDevSync';
-import type { ProviderModel } from '../src/providers';
 
 describe('isChatModel filter', () => {
   it('accepts valid text-in text-out models with context > 0', () => {
@@ -195,5 +195,15 @@ describe('compareProviderModels', () => {
 
     expect(report.newModels.length).toBe(1);
     expect(report.newModels[0].modelId).toBe('new-model');
+  });
+
+  it('marks aggregator mappings as optInOnly', () => {
+    const openrouter = KNOWN_MODELS_DEV_MAPPINGS.find((m) => m.providerId === 'openrouter');
+    const nvidia = KNOWN_MODELS_DEV_MAPPINGS.find((m) => m.providerId === 'nvidia');
+    const zai = KNOWN_MODELS_DEV_MAPPINGS.find((m) => m.providerId === 'zai');
+
+    expect(openrouter?.optInOnly).toBe(true);
+    expect(nvidia?.optInOnly).toBe(true);
+    expect(zai?.optInOnly).toBeFalsy();
   });
 });

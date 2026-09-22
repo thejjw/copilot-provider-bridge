@@ -43,6 +43,7 @@ const provUrl = `data:text/javascript;base64,${provCode}`;
 const { PROVIDERS } = await import(provUrl);
 const args = process.argv.slice(2);
 const providerFilter = args.includes('--provider') ? args[args.indexOf('--provider') + 1] : undefined;
+const includeAll = args.includes('--all');
 const outputJson = args.includes('--json');
 const outputSnippets = args.includes('--snippets');
 
@@ -62,7 +63,11 @@ async function main() {
   const reports = [];
 
   for (const mapping of KNOWN_MODELS_DEV_MAPPINGS) {
-    if (providerFilter && mapping.providerId !== providerFilter && mapping.modelsDevSlug !== providerFilter) {
+    if (providerFilter) {
+      if (mapping.providerId !== providerFilter && mapping.modelsDevSlug !== providerFilter) {
+        continue;
+      }
+    } else if (mapping.optInOnly && !includeAll) {
       continue;
     }
 
@@ -131,7 +136,7 @@ async function main() {
     }
 
     if (rep.unmatchedExistingModelIds.length > 0) {
-      console.log(`  Not in models.dev (${rep.unmatchedExistingModelIds.length}): ${rep.unmatchedExistingModelIds.join(', ')}`);
+      console.log(`  Extension-only (verify manually) [${rep.unmatchedExistingModelIds.length}]: ${rep.unmatchedExistingModelIds.join(', ')}`);
     }
 
     if (outputSnippets && rep.newModels.length > 0) {
