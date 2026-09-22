@@ -124,6 +124,25 @@ The entire model catalog — providers, endpoints, token limits, vision backends
 - **Copilot Provider Bridge: Reload Provider Catalog** — force a re-read of the catalog file.
 - **Copilot Provider Bridge: Migrate Provider Catalog to Latest Defaults** — back up the current file, regenerate from newest defaults, open both for manual porting.
 - **Copilot Provider Bridge: Reset Provider Catalog to Defaults (Delete Customizations)** — delete the catalog file and revert to bundled defaults.
+- **Copilot Provider Bridge: Check for Updated Models (models.dev)** — query live model specifications, context windows, and output limits from [models.dev](https://models.dev/) for any configured provider. Review detected additions/changes and selectively import them into your custom `copilot-provider-bridge.jsonc` file with zero blind overwrites.
+
+## Developer & Maintainer Scripts
+
+To maintain and audit model specifications against upstream directories:
+
+```bash
+# Audit bundled providers against models.dev and print diffs of new models or changed limits
+npm run catalog:audit
+
+# Audit a specific provider (e.g. zai, minimax, kimi, qwen, deepseek, openrouter, nvidia)
+npm run catalog:audit -- --provider zai
+
+# Audit and print ready-to-paste TypeScript snippets for src/providers.ts
+npm run catalog:audit -- --snippets
+
+# Output structured JSON diff report
+npm run catalog:audit -- --json
+```
 
 ## Requirements
 

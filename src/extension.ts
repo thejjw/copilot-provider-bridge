@@ -16,6 +16,7 @@ import {
   resetCatalogCommand,
   runCatalogUpgradeNotice,
 } from './commands/catalog';
+import { checkModelsDevCommand } from './commands/syncModelsDev';
 import { selectVisionModelCommand } from './commands/selectVisionModel';
 import { runDiagnosticsCommand } from './commands/diagnostics';
 import { UsageStatusBarManager } from './usage/statusBar';
@@ -108,6 +109,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('copilot-provider-bridge.reloadCatalog', () => reloadCatalogCommand()),
     vscode.commands.registerCommand('copilot-provider-bridge.migrateCatalog', () => migrateCatalogCommand()),
     vscode.commands.registerCommand('copilot-provider-bridge.resetCatalog', () => resetCatalogCommand()),
+    vscode.commands.registerCommand('copilot-provider-bridge.checkModelsDev', () => checkModelsDevCommand()),
     vscode.commands.registerCommand('copilot-provider-bridge.resetConfiguration', () =>
       resetConfigurationCommand(context)
     ),

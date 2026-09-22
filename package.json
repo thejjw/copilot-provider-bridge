@@ -193,6 +193,11 @@
         "command": "copilot-provider-bridge.resetCatalog",
         "title": "Reset Provider Catalog to Defaults (Delete Customizations)",
         "category": "Copilot Provider Bridge"
+      },
+      {
+        "command": "copilot-provider-bridge.checkModelsDev",
+        "title": "Check for Updated Models (models.dev)",
+        "category": "Copilot Provider Bridge"
       }
     ],
     "jsonValidation": [
@@ -915,6 +920,7 @@
     "build": "node esbuild.config.mjs",
     "watch": "node esbuild.config.mjs --watch",
     "typecheck": "tsc --noEmit",
+    "catalog:audit": "node scripts/sync-models-dev.mjs",
     "pretest": "npm run build",
     "test": "node scripts/smoke-test.mjs",
     "test:unit": "vitest run",
