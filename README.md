@@ -6,7 +6,7 @@ Enables **VS Code Copilot AI features** for users via existing third-party AI co
 
 1. **Quick Setup Wizard**: On first install (or via Command Palette), guides you through selecting your coding plans and companion MCP tools in one streamlined flow.
 2. **Language Models**: Wires Anthropic-Messages and OpenAI-compatible coding plans into VS Code Copilot Chat's model picker via `%APPDATA%\Code\User\chatLanguageModels.json` (Windows) / `~/.config/Code/User/chatLanguageModels.json` (Linux) / `~/Library/Application Support/Code/User/chatLanguageModels.json` (macOS).
-3. **Built-in Vision Agent Tool**: Allows pure text-only models (like `GLM-5.3` and `DeepSeek V4 Pro`) to automatically delegate screenshot, UI mockup, and diagram inspection to any configured multimodal backend (`GLM-4.6V`, `GLM-5V-Turbo`, `Gemini 2.5 Flash`, `MiniMax M3`, `Kimi K3`, `Qwen 3.8 Max`).
+3. **Built-in Vision Agent Tool**: Allows pure text-only models (like `GLM-5.3` and `DeepSeek V4 Pro`) to automatically delegate screenshot, UI mockup, and diagram inspection to any configured multimodal backend (`GLM-4.6V`, `GLM-5V-Turbo`, `Gemini 2.5 Flash`, `MiniMax M3.1 Flash`, `Kimi K3`, `Qwen 3.8 Max`).
 4. **Companion MCP Tools**: Configures verified MCP tool presets (`web-search-prime`, `web-reader`, `zread`, `zai-mcp-server`, `minimax-mcp`) grouped by provider into user or workspace `mcp.json` with safe `inputs` array definitions.
 5. **Status Bar Quota Indicator & Rich Dashboard Tooltip**:
    - **Status Bar**: Renders bundled offline **Datatype pie chart icons** with exact 1% granularity (`$(copilot-provider-bridge-p<pct>) <pct>%`) for percentage plans (Z.ai, Kimi) or exact balance (e.g. `¥123.45`) for currency models. The badge shows only the provider you **explicitly select** — VS Code exposes no API to detect which chat model is active, so there is deliberately no auto-select guessing. When no provider is selected, a neutral placeholder is shown and the hover tooltip still lists all configured plans.
@@ -22,7 +22,7 @@ Enables **VS Code Copilot AI features** for users via existing third-party AI co
 | **Z.ai GLM** | Coding Plan (Sub) | Anthropic | `https://api.z.ai/api/anthropic/v1/messages` | `glm-4.7` | 202,752 (~200K) | 65,535 (64K) | Forced Thinking | No |
 | **Z.ai GLM** | Coding Plan (Sub) | OpenAI | `https://api.z.ai/api/coding/paas/v4/chat/completions` | `glm-5v-turbo` | 202,752 (~200K) | 131,072 (128K) | Dynamic Thinking | Yes |
 | **DeepSeek** | Top-up / Payg | Anthropic | `https://api.deepseek.com/anthropic/v1/messages` | `deepseek-v4-pro`, `deepseek-flash` | 1,000,000 (1M) | 393,216 (384K) | `low`, `medium`, `high` | Yes (`deepseek-flash`) |
-| **MiniMax** | Token Plan (Sub) | Anthropic | `https://api.minimax.io/anthropic/v1/messages` | `MiniMax-M3` | 1,000,000 (1M) | 131,072 (128K) | `low`, `medium`, `high` | Yes |
+| **MiniMax** | Token Plan (Sub) | Anthropic | `https://api.minimax.io/anthropic/v1/messages` | `MiniMax-M3.1-Flash` | 1,000,000 (1M) | 524,288 (512K) | `low`, `medium`, `high`, `max` | Yes |
 | **Kimi** | Code Plan (Sub) | Anthropic | `https://api.kimi.com/coding/v1/messages` | `k3` | 1,048,576 (1M) | 131,072 (128K) | `low`, `high`, `max` | Yes |
 | **Kimi** | Code Plan (Sub) | Anthropic | `https://api.kimi.com/coding/v1/messages` | `k3-256k` | 262,144 (256K) | 65,536 (64K) | `low`, `high`, `max` | Yes |
 | **Kimi** | Code Plan (Sub) | Anthropic | `https://api.kimi.com/coding/v1/messages` | `kimi-for-coding` | 262,144 (256K) | 65,536 (64K) | Forced Thinking | Yes |
@@ -46,7 +46,7 @@ When using a text-only model (like `GLM-5.3` or `DeepSeek V4 Pro`), the built-in
 | **DeepSeek Flash** | DeepSeek | Anthropic Messages | Native multimodal coding model with 1M context |
 | ~~**Gemini 2.5 Flash**~~ | ~~Google~~ | ~~OpenAI Chat~~ | *Disabled for now — requires Google AI Studio billing quota* |
 | ~~**Gemini 3.7 Flash**~~ | ~~Google~~ | ~~OpenAI Chat~~ | *Disabled for now — requires Google AI Studio billing quota* |
-| **MiniMax M3** | MiniMax | OpenAI Chat | 1M context multimodal model |
+| **MiniMax M3.1 Flash** | MiniMax | OpenAI Chat | 1M context multimodal model |
 | **Kimi K3** | Moonshot | Anthropic Messages | 1M context multimodal model |
 | **Qwen 3.8 Max** | Alibaba | Anthropic Messages | Flagship multimodal model |
 | **Muse Glimmer 30B** | NVIDIA / Meta | OpenAI Chat | High-speed 131K vision model on NVIDIA NIM |
@@ -81,7 +81,7 @@ Copilot Provider Bridge configures models and tools for VS Code's native BYOK en
 
 ### 2. Vision & Multimodal Inputs (Text-Only vs. Multimodal Models)
 - **Native Multimodal Models (`vision: true`)**:
-  - Models like `glm-5.3-flash`, `glm-5v-turbo`, `deepseek-flash`, `MiniMax-M3`, `k3`, `qwen3.8-max`, `qwen3.8-flash`, `gemini-3.7-flash`, `gemini-2.5-pro`, and `gemini-2.5-flash` natively support image inputs.
+  - Models like `glm-5.3-flash`, `glm-5v-turbo`, `deepseek-flash`, `MiniMax-M3.1-Flash`, `k3`, `qwen3.8-max`, `qwen3.8-flash`, `gemini-3.7-flash`, `gemini-2.5-pro`, and `gemini-2.5-flash` natively support image inputs.
   - You can drag-and-drop screenshots, mockups, and images directly into the chat prompt. The image payload is forwarded directly to the provider's multimodal endpoint.
 - **Text-Only Coding Models (`vision: false`) + Vision Agent Tool**:
   - Frontier coding models like `glm-5.3`, `glm-4.7`, `deepseek-v4-pro`, and `qwen3.6-flash` are text-specialized.

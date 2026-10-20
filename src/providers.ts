@@ -164,7 +164,7 @@ export const PROVIDERS: Provider[] = [
   {
     id: 'minimax',
     name: 'MiniMax',
-    description: 'MiniMax M3 (1M Context + Vision) via MiniMax Anthropic endpoint.',
+    description: 'MiniMax M3.1 Flash (1M Context + Vision) via MiniMax Anthropic endpoint.',
     endpointUrl: 'https://api.minimax.io/anthropic/v1/messages',
     apiType: 'messages',
     secretInput: 'copilot-provider-bridge.minimax.apiKey',
@@ -173,15 +173,18 @@ export const PROVIDERS: Provider[] = [
     },
     models: [
       {
-        id: 'MiniMax-M3',
-        name: 'MiniMax M3 (1M Vision)',
+        // Bare id on purpose: MiniMax's Anthropic endpoint silently answers with MiniMax-M3
+        // for any id it does not recognize (including suffixed variants), so a wrong id
+        // fails as a stale model rather than an error.
+        id: 'MiniMax-M3.1-Flash',
+        name: 'MiniMax M3.1 Flash (1M Vision)',
         toolCalling: true,
         vision: true,
         contextWindow: 1_000_000,
-        maxOutputTokens: 131_072,
-        maxInputTokens: 868_928,
+        maxOutputTokens: 524_288,
+        maxInputTokens: 475_712,
         thinking: true,
-        supportsReasoningEffort: ['low', 'medium', 'high'],
+        supportsReasoningEffort: ['low', 'medium', 'high', 'max'],
         reasoningEffortFormat: 'messages',
       },
     ],

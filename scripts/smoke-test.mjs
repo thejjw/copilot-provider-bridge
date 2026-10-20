@@ -25,7 +25,7 @@
 //      - Asserts status bar text is ultra-minimal (only single pie glyph or balance number).
 //      - Asserts hover tooltip renders all details and error messages.
 //   5. Vision Agent Tool & Backends:
-//      - Asserts VISION_BACKENDS has 9 backends (GLM-4.6V, GLM-5V-Turbo, GLM-5.3-Flash, Gemini Flash/Pro, DeepSeek Flash, MiniMax M3, Kimi K3, Qwen 3.8 Max, NVIDIA NIM).
+//      - Asserts VISION_BACKENDS has 9 backends (GLM-4.6V, GLM-5V-Turbo, GLM-5.3-Flash, Gemini Flash/Pro, DeepSeek Flash, MiniMax M3.1 Flash, Kimi K3, Qwen 3.8 Max, NVIDIA NIM).
 //      - Asserts CopilotProviderBridgeVisionTool.toolId is provider_bridge_analyze_visual.
 //      - Asserts tool resolution falls back gracefully when keys are missing or preferred is selected.
 //   6. Packaged .vsix existence and non-zero size.
@@ -263,8 +263,14 @@ check('old deepseek-v4-flash is removed', !dsGroup.models.some((m) => m.id === '
 check('old deepseek-v4-flash-vision-exp is removed', !dsGroup.models.some((m) => m.id === 'deepseek-v4-flash-vision-exp'));
 // MiniMax check
 const mmGroup = providerToConfig(providers.find((p) => p.id === 'minimax'), providers.find((p) => p.id === 'minimax').models);
+const mmFlash = mmGroup.models.find((m) => m.id === 'MiniMax-M3.1-Flash');
+const mmVision = VISION_BACKENDS.find((b) => b.providerId === 'minimax');
 check('MiniMax-Text-01 is removed', !mmGroup.models.some((m) => m.id === 'MiniMax-Text-01'));
-check('MiniMax-M3 is present', mmGroup.models.some((m) => m.id === 'MiniMax-M3'));
+check('MiniMax-M3.1-Flash is present', !!mmFlash);
+check('MiniMax model id carries no context suffix', mmGroup.models.every((m) => !m.id.includes('[')), mmGroup.models.map((m) => m.id).join(','));
+check('MiniMax M3.1-Flash is 1M context with 512K output', mmFlash?.maxInputTokens + mmFlash?.maxOutputTokens === 1000000 && mmFlash?.maxOutputTokens === 524288, `out=${mmFlash?.maxOutputTokens}`);
+check('MiniMax M3.1-Flash reasoning effort includes max', Array.isArray(mmFlash?.supportsReasoningEffort) && mmFlash.supportsReasoningEffort.includes('max'), JSON.stringify(mmFlash?.supportsReasoningEffort));
+check('MiniMax vision backend model matches the provider model id', mmVision?.model === 'MiniMax-M3.1-Flash', `got ${mmVision?.model}`);
 
 // Kimi bare model ID check
 const kimiGroup = providerToConfig(providers.find((p) => p.id === 'kimi'), providers.find((p) => p.id === 'kimi').models);

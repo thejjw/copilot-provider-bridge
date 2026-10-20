@@ -72,11 +72,13 @@ export const VISION_BACKENDS: VisionBackendOption[] = [
     apiType: 'anthropic',
   },
   {
+    // The backend id stays 'minimax-m3' because it is persisted in the user's saved vision
+    // model preference; renaming it would silently un-pin their choice.
     id: 'minimax-m3',
-    name: 'MiniMax M3 (MiniMax Vision)',
+    name: 'MiniMax M3.1 Flash (MiniMax Vision)',
     providerId: 'minimax',
-    description: 'MiniMax M3 multimodal model with 1M context.',
-    model: 'MiniMax-M3',
+    description: 'MiniMax M3.1 Flash multimodal model with 1M context.',
+    model: 'MiniMax-M3.1-Flash',
     endpointUrl: 'https://api.minimax.io/v1/chat/completions',
     apiType: 'openai',
   },

@@ -23,7 +23,7 @@ describe('isChatModel filter', () => {
 
   it('accepts multimodal models with text input and output', () => {
     const multimodal: ModelsDevModel = {
-      id: 'MiniMax-M3',
+      id: 'MiniMax-M3.1-Flash',
       modalities: { input: ['text', 'image', 'video'], output: ['text'] },
       limit: { context: 1048576, output: 512000 },
     };
