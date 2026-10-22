@@ -1,5 +1,6 @@
 node_modules/**
 src/**
+media/icon-original.png
 scripts/**
 test/**
 docs/**
