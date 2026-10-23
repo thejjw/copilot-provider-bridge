@@ -83,11 +83,13 @@ export const VISION_BACKENDS: VisionBackendOption[] = [
     apiType: 'openai',
   },
   {
+    // The backend id stays 'kimi-k3' because it is persisted in the user's saved vision
+    // model preference; renaming it would silently un-pin their choice.
     id: 'kimi-k3',
-    name: 'Kimi K3 (Moonshot Vision)',
+    name: 'Kimi K3.1 Pro (Moonshot Vision)',
     providerId: 'kimi',
-    description: 'Kimi K3 multimodal model with 1M context.',
-    model: 'k3',
+    description: 'Kimi K3.1 Pro multimodal model with 1M context.',
+    model: 'k3.1-pro',
     endpointUrl: 'https://api.kimi.com/coding/v1/messages',
     apiType: 'anthropic',
   },

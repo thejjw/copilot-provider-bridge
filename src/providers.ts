@@ -192,7 +192,7 @@ export const PROVIDERS: Provider[] = [
   {
     id: 'kimi',
     name: 'Kimi Code Plan',
-    description: 'Kimi K3 (1M Context + Vision) via Kimi Coding Anthropic endpoint.',
+    description: 'Kimi K3.1 Pro (1M Context + Vision) via Kimi Coding Anthropic endpoint.',
     endpointUrl: 'https://api.kimi.com/coding/v1/messages',
     apiType: 'messages',
     secretInput: 'copilot-provider-bridge.kimi.apiKey',
@@ -200,6 +200,18 @@ export const PROVIDERS: Provider[] = [
       Authorization: 'Bearer ${apiKey}',
     },
     models: [
+      {
+        id: 'k3.1-pro',
+        name: 'Kimi K3.1 Pro (1M Vision)',
+        toolCalling: true,
+        vision: true,
+        contextWindow: 1_048_576,
+        maxOutputTokens: 131_072,
+        maxInputTokens: 917_504,
+        thinking: true,
+        supportsReasoningEffort: ['low', 'high', 'max'],
+        reasoningEffortFormat: 'messages',
+      },
       {
         id: 'k3',
         name: 'Kimi K3 (1M Vision)',

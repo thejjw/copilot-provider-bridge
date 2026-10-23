@@ -9,7 +9,7 @@
 //      - Asserts GLM-5.3 has exact effort levels ['low', 'high', 'max'] (no medium).
 //      - Asserts GLM-4.7 and GLM-5V-Turbo have thinking: true without supportsReasoningEffort.
 //      - Asserts DeepSeek V4 has 384K max output (393,216) and derived input (606,784).
-//      - Asserts Kimi model ID is bare 'k3'.
+//      - Asserts Kimi model IDs are bare (k3.1-pro, k3) with no [1m] suffix.
 //      - Asserts Google Gemini models are under chat-completions.
 //      - Asserts removed models (deepseek-reasoner, deepseek-chat, qwen3.7-max, MiniMax-Text-01) are absent.
 //   3. MCP Catalog, Grouping & Safe Merge Assertions:
@@ -25,7 +25,7 @@
 //      - Asserts status bar text is ultra-minimal (only single pie glyph or balance number).
 //      - Asserts hover tooltip renders all details and error messages.
 //   5. Vision Agent Tool & Backends:
-//      - Asserts VISION_BACKENDS has 9 backends (GLM-4.6V, GLM-5V-Turbo, GLM-5.3-Flash, Gemini Flash/Pro, DeepSeek Flash, MiniMax M3.1 Flash, Kimi K3, Qwen 3.8 Max, NVIDIA NIM).
+//      - Asserts VISION_BACKENDS has 9 backends (GLM-4.6V, GLM-5V-Turbo, GLM-5.3-Flash, Gemini Flash/Pro, DeepSeek Flash, MiniMax M3.1 Flash, Kimi K3.1 Pro, Qwen 3.8 Max, NVIDIA NIM).
 //      - Asserts CopilotProviderBridgeVisionTool.toolId is provider_bridge_analyze_visual.
 //      - Asserts tool resolution falls back gracefully when keys are missing or preferred is selected.
 //   6. Packaged .vsix existence and non-zero size.
@@ -196,7 +196,7 @@ for (const p of providers) {
     check(`[${p.id}/${cfgM.id}] apiType is valid`, cfgM.apiType === 'messages' || cfgM.apiType === 'chat-completions');
   }
 }
-check('total models verified across all active providers', totalModelsChecked === 23, `total=${totalModelsChecked}`);
+check('total models verified across all active providers', totalModelsChecked === 24, `total=${totalModelsChecked}`);
 
 const testCfg = [providerToConfig(providers[0], [providers[0].models[0]], 'old-key')];
 const existingIdx = findGroupIndex(testCfg, providers[0].id);
@@ -274,7 +274,15 @@ check('MiniMax vision backend model matches the provider model id', mmVision?.mo
 
 // Kimi bare model ID check
 const kimiGroup = providerToConfig(providers.find((p) => p.id === 'kimi'), providers.find((p) => p.id === 'kimi').models);
-check('Kimi has exactly 4 models', kimiGroup.models.length === 4, `got ${kimiGroup.models.length}`);
+check('Kimi has exactly 5 models', kimiGroup.models.length === 5, `got ${kimiGroup.models.length}`);
+const k3_1 = kimiGroup.models.find((m) => m.id === 'k3.1-pro');
+check('Kimi model id is bare k3.1-pro (not k3.1-pro[1m])', k3_1?.id === 'k3.1-pro', `got ${k3_1?.id}`);
+check('Kimi k3.1-pro contextWindow sum is 1,048,576', k3_1?.maxInputTokens + k3_1?.maxOutputTokens === 1048576);
+check('Kimi k3.1-pro reasoning effort levels are explicitly [low, high, max]',
+  JSON.stringify(k3_1?.supportsReasoningEffort) === JSON.stringify(['low', 'high', 'max']),
+  JSON.stringify(k3_1?.supportsReasoningEffort)
+);
+check('Kimi k3.1-pro thinking is true', k3_1?.thinking === true);
 const k3 = kimiGroup.models.find((m) => m.id === 'k3');
 check('Kimi model id is bare k3 (not k3[1m])', k3?.id === 'k3', `got ${k3?.id}`);
 check('Kimi k3 contextWindow sum is 1,048,576', k3?.maxInputTokens + k3?.maxOutputTokens === 1048576);
@@ -519,6 +527,7 @@ console.log('\n-- 6. Vision Agent Tool & Backends --');
 check('VISION_BACKENDS exported and has 9 options', Array.isArray(VISION_BACKENDS) && VISION_BACKENDS.length === 9, `length=${VISION_BACKENDS?.length}`);
 check('GLM-5.3-Flash backend present (openai apiType)', VISION_BACKENDS.some((b) => b.id === 'glm-5.3-flash' && b.apiType === 'openai'));
 check('DeepSeek Flash backend present (anthropic apiType)', VISION_BACKENDS.some((b) => b.id === 'deepseek-flash' && b.apiType === 'anthropic'));
+check('Kimi vision backend targets k3.1-pro', VISION_BACKENDS.some((b) => b.providerId === 'kimi' && b.model === 'k3.1-pro'));
 check('CopilotProviderBridgeVisionTool.toolId is provider_bridge_analyze_visual', CopilotProviderBridgeVisionTool.toolId === 'provider_bridge_analyze_visual');
 // Check package.json contribution fields
 const pkgJson = JSON.parse(await readFile(join(here, '..', 'package.json'), 'utf8'));
