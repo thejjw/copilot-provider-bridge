@@ -24,7 +24,6 @@ Enables **VS Code Copilot AI features** for users via existing third-party AI co
 | **DeepSeek** | Top-up / Payg | Anthropic | `https://api.deepseek.com/anthropic/v1/messages` | `deepseek-v4-pro`, `deepseek-flash` | 1,000,000 (1M) | 393,216 (384K) | `low`, `medium`, `high` | Yes (`deepseek-flash`) |
 | **MiniMax** | Token Plan (Sub) | Anthropic | `https://api.minimax.io/anthropic/v1/messages` | `MiniMax-M3.1-Flash` | 1,000,000 (1M) | 524,288 (512K) | `low`, `medium`, `high`, `max` | Yes |
 | **Kimi** | Code Plan (Sub) | Anthropic | `https://api.kimi.com/coding/v1/messages` | `k3.1-pro` | 1,048,576 (1M) | 131,072 (128K) | `low`, `high`, `max` | Yes |
-| **Kimi** | Code Plan (Sub) | Anthropic | `https://api.kimi.com/coding/v1/messages` | `k3` | 1,048,576 (1M) | 131,072 (128K) | `low`, `high`, `max` | Yes |
 | **Kimi** | Code Plan (Sub) | Anthropic | `https://api.kimi.com/coding/v1/messages` | `k3-256k` | 262,144 (256K) | 65,536 (64K) | `low`, `high`, `max` | Yes |
 | **Kimi** | Code Plan (Sub) | Anthropic | `https://api.kimi.com/coding/v1/messages` | `kimi-for-coding` | 262,144 (256K) | 65,536 (64K) | Forced Thinking | Yes |
 | **Kimi** | Code Plan (Sub) | Anthropic | `https://api.kimi.com/coding/v1/messages` | `kimi-for-coding-highspeed` | 262,144 (256K) | 65,536 (64K) | Forced Thinking (6× Speed) | Yes |
@@ -82,7 +81,7 @@ Copilot Provider Bridge configures models and tools for VS Code's native BYOK en
 
 ### 2. Vision & Multimodal Inputs (Text-Only vs. Multimodal Models)
 - **Native Multimodal Models (`vision: true`)**:
-  - Models like `glm-5.3-flash`, `glm-5v-turbo`, `deepseek-flash`, `MiniMax-M3.1-Flash`, `k3.1-pro`, `k3`, `qwen3.8-max`, `qwen3.8-flash`, `gemini-3.7-flash`, `gemini-2.5-pro`, and `gemini-2.5-flash` natively support image inputs.
+  - Models like `glm-5.3-flash`, `glm-5v-turbo`, `deepseek-flash`, `MiniMax-M3.1-Flash`, `k3.1-pro`, `qwen3.8-max`, `qwen3.8-flash`, `gemini-3.7-flash`, `gemini-2.5-pro`, and `gemini-2.5-flash` natively support image inputs.
   - You can drag-and-drop screenshots, mockups, and images directly into the chat prompt. The image payload is forwarded directly to the provider's multimodal endpoint.
 - **Text-Only Coding Models (`vision: false`) + Vision Agent Tool**:
   - Frontier coding models like `glm-5.3`, `glm-4.7`, `deepseek-v4-pro`, and `qwen3.6-flash` are text-specialized.

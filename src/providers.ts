@@ -213,18 +213,6 @@ export const PROVIDERS: Provider[] = [
         reasoningEffortFormat: 'messages',
       },
       {
-        id: 'k3',
-        name: 'Kimi K3 (1M Vision)',
-        toolCalling: true,
-        vision: true,
-        contextWindow: 1_048_576,
-        maxOutputTokens: 131_072,
-        maxInputTokens: 917_504,
-        thinking: true,
-        supportsReasoningEffort: ['low', 'high', 'max'],
-        reasoningEffortFormat: 'messages',
-      },
-      {
         id: 'k3-256k',
         name: 'Kimi K3 256K (Vision)',
         toolCalling: true,

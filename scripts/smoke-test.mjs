@@ -9,7 +9,7 @@
 //      - Asserts GLM-5.3 has exact effort levels ['low', 'high', 'max'] (no medium).
 //      - Asserts GLM-4.7 and GLM-5V-Turbo have thinking: true without supportsReasoningEffort.
 //      - Asserts DeepSeek V4 has 384K max output (393,216) and derived input (606,784).
-//      - Asserts Kimi model IDs are bare (k3.1-pro, k3) with no [1m] suffix.
+//      - Asserts Kimi model ids are bare (k3.1-pro) with no [1m] suffix.
 //      - Asserts Google Gemini models are under chat-completions.
 //      - Asserts removed models (deepseek-reasoner, deepseek-chat, qwen3.7-max, MiniMax-Text-01) are absent.
 //   3. MCP Catalog, Grouping & Safe Merge Assertions:
@@ -196,7 +196,7 @@ for (const p of providers) {
     check(`[${p.id}/${cfgM.id}] apiType is valid`, cfgM.apiType === 'messages' || cfgM.apiType === 'chat-completions');
   }
 }
-check('total models verified across all active providers', totalModelsChecked === 24, `total=${totalModelsChecked}`);
+check('total models verified across all active providers', totalModelsChecked === 23, `total=${totalModelsChecked}`);
 
 const testCfg = [providerToConfig(providers[0], [providers[0].models[0]], 'old-key')];
 const existingIdx = findGroupIndex(testCfg, providers[0].id);
@@ -274,7 +274,7 @@ check('MiniMax vision backend model matches the provider model id', mmVision?.mo
 
 // Kimi bare model ID check
 const kimiGroup = providerToConfig(providers.find((p) => p.id === 'kimi'), providers.find((p) => p.id === 'kimi').models);
-check('Kimi has exactly 5 models', kimiGroup.models.length === 5, `got ${kimiGroup.models.length}`);
+check('Kimi has exactly 4 models', kimiGroup.models.length === 4, `got ${kimiGroup.models.length}`);
 const k3_1 = kimiGroup.models.find((m) => m.id === 'k3.1-pro');
 check('Kimi model id is bare k3.1-pro (not k3.1-pro[1m])', k3_1?.id === 'k3.1-pro', `got ${k3_1?.id}`);
 check('Kimi k3.1-pro contextWindow sum is 1,048,576', k3_1?.maxInputTokens + k3_1?.maxOutputTokens === 1048576);
@@ -283,13 +283,6 @@ check('Kimi k3.1-pro reasoning effort levels are explicitly [low, high, max]',
   JSON.stringify(k3_1?.supportsReasoningEffort)
 );
 check('Kimi k3.1-pro thinking is true', k3_1?.thinking === true);
-const k3 = kimiGroup.models.find((m) => m.id === 'k3');
-check('Kimi model id is bare k3 (not k3[1m])', k3?.id === 'k3', `got ${k3?.id}`);
-check('Kimi k3 contextWindow sum is 1,048,576', k3?.maxInputTokens + k3?.maxOutputTokens === 1048576);
-check('Kimi k3 reasoning effort levels are explicitly [low, high, max]',
-  JSON.stringify(k3?.supportsReasoningEffort) === JSON.stringify(['low', 'high', 'max']),
-  JSON.stringify(k3?.supportsReasoningEffort)
-);
 const k3_256k = kimiGroup.models.find((m) => m.id === 'k3-256k');
 check('Kimi k3-256k contextWindow sum is 262,144', k3_256k?.maxInputTokens + k3_256k?.maxOutputTokens === 262144);
 check('Kimi k3-256k reasoning effort levels are explicitly [low, high, max]',
