@@ -154,6 +154,26 @@ describe('resolvePresetServer', () => {
     });
   });
 
+  it('substitutes stdio args and reports ids that appear only there', () => {
+    const argsPreset: McpPreset = {
+      id: 'args-input',
+      name: 'Args Input',
+      description: 'stdio preset whose placeholder lives in args',
+      providerId: 'zai',
+      serverKey: 'argsInput',
+      inputs: [{ type: 'promptString', id: 'args-key', description: 'Args', password: true }],
+      server: { type: 'stdio', command: 'node', args: ['--key', '${input:args-key}'], env: {} },
+    };
+
+    expect(resolvePresetServer(argsPreset, { 'args-key': 'abc' })).toEqual({
+      kind: 'stdio',
+      command: 'node',
+      args: ['--key', 'abc'],
+      env: {},
+    });
+    expect(() => resolvePresetServer(argsPreset, {})).toThrow(/args-key/);
+  });
+
   it('throws listing the unresolved input id', () => {
     expect(() => resolvePresetServer(MCP_PRESETS[0], {})).toThrow(/zai-api-key/);
   });

@@ -182,15 +182,12 @@ export function resolvePresetServer(preset: McpPreset, values: Record<string, st
   for (const [name, template] of Object.entries(server.env ?? {})) {
     env[name] = substituteInputs(template, values, unresolved);
   }
+  // Args are substituted before the check so an input id used only in args still reports.
+  const args = (server.args ?? []).map((arg) => substituteInputs(arg, values, unresolved));
   if (unresolved.size > 0) {
     throw new Error(`MCP preset "${preset.id}" references unresolved input(s): ${[...unresolved].join(', ')}`);
   }
-  return {
-    kind: 'stdio',
-    command: server.command,
-    args: (server.args ?? []).map((arg) => substituteInputs(arg, values, unresolved)),
-    env,
-  };
+  return { kind: 'stdio', command: server.command, args, env };
 }
 
 /** Normalize the transport name: VS Code treats `sse` as an HTTP-family transport. */
