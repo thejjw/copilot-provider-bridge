@@ -1,13 +1,19 @@
 // Reset command for Copilot Provider Bridge.
 // Clears all extension secrets in SecretStorage, resets globalState,
 // removes Bridge provider groups from chatLanguageModels.json,
-// and removes companion MCP servers from mcp.json.
+// and removes the extension-managed MCP presets plus their legacy mcp.json entries.
 
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { readConfig, writeConfig, userConfigPath } from '../config';
 import { catalogStore } from '../catalog/store';
-import { readMcpFile, userMcpConfigPath, workspaceMcpConfigPath, writeMcpFile } from './addMcp';
+import { cleanupLegacyMcpFile } from '../mcpLegacy';
+import {
+  MCP_MIGRATION_STATE_KEY,
+  MCP_PRESET_IDS_STATE_KEY,
+  refreshBridgeMcpServers,
+} from '../mcpServerProvider';
+import { userMcpConfigPath, workspaceMcpConfigPaths } from '../utils/userPaths';
 import { Logger } from '../utils/logger';
 
 export interface ResetOptions {
@@ -36,6 +42,8 @@ export async function resetCopilotProviderBridgeState(
   await context.globalState.update('copilotProviderBridge.hasPromptedSetup', undefined);
   await context.globalState.update('copilotProviderBridge.pinnedProvider', undefined);
   await context.globalState.update('copilotProviderBridge.preferredVisionModel', undefined);
+  await context.globalState.update(MCP_PRESET_IDS_STATE_KEY, undefined);
+  await context.globalState.update(MCP_MIGRATION_STATE_KEY, undefined);
   Logger.info('Cleared Copilot Provider Bridge globalState entries.');
 
   // 3. Remove Bridge provider groups from chatLanguageModels.json
@@ -61,51 +69,17 @@ export async function resetCopilotProviderBridgeState(
     Logger.warn(`Could not clean config file ${targetConfig}`, err);
   }
 
-  // 4. Remove companion MCP servers from user and workspace mcp.json
-  const targetMcpPaths = options?.customMcpPaths ?? [
-    userMcpConfigPath(),
-    ...(workspaceMcpConfigPath() ? [workspaceMcpConfigPath()!] : []),
-  ];
-
-  const effectivePresets = catalogStore.get().mcpPresets;
-  const knownMcpKeys = new Set(effectivePresets.map((p) => p.serverKey));
-  const knownInputIds = new Set(effectivePresets.flatMap((p) => p.inputs.map((i) => i.id)));
-
+  // 4. Remove extension-managed MCP presets and their legacy mcp.json entries
+  const targetMcpPaths = options?.customMcpPaths ?? [userMcpConfigPath(), ...workspaceMcpConfigPaths()];
   for (const p of targetMcpPaths) {
     try {
-      const mcpCfg = await readMcpFile(p);
-      if (mcpCfg) {
-        let changed = false;
-        const newServers = { ...mcpCfg.servers };
-        for (const k of Object.keys(newServers)) {
-          if (knownMcpKeys.has(k)) {
-            delete newServers[k];
-            changed = true;
-          }
-        }
-        let newInputs = mcpCfg.inputs ? [...mcpCfg.inputs] : undefined;
-        if (newInputs) {
-          const beforeLen = newInputs.length;
-          newInputs = newInputs.filter((i) => !knownInputIds.has(i.id));
-          if (newInputs.length !== beforeLen) {
-            changed = true;
-          }
-        }
-        if (changed) {
-          mcpCfg.servers = newServers;
-          if (newInputs && newInputs.length > 0) {
-            mcpCfg.inputs = newInputs;
-          } else {
-            delete mcpCfg.inputs;
-          }
-          await writeMcpFile(p, mcpCfg);
-          Logger.info(`Cleaned companion MCP servers from ${p}`);
-        }
-      }
+      const result = await cleanupLegacyMcpFile(p, catalogStore.get().mcpPresets, { requireMatch: false });
+      if (result.changed) Logger.info(`Cleaned legacy MCP entries from ${p}`);
     } catch (err) {
       Logger.warn(`Could not clean MCP file ${p}`, err);
     }
   }
+  refreshBridgeMcpServers();
 
   return { clearedSecretsCount };
 }

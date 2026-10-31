@@ -8,10 +8,9 @@ import {
   userConfigPath,
   writeConfig,
 } from '../config';
-import { readMcpFile, userMcpConfigPath, workspaceMcpConfigPath, writeMcpFile } from './addMcp';
+import { installMcpPresets } from './addMcp';
 import { validateProviderKey } from './setup';
 import { Logger } from '../utils/logger';
-import { mergeMcpConfig } from '../mcpCatalog';
 
 /**
  * Multi-step add flow:
@@ -19,7 +18,7 @@ import { mergeMcpConfig } from '../mcpCatalog';
  *   2. Prompt for API key and validate it live
  *   3. QuickPick one or more models from that provider
  *   4. Merge or replace the provider group in chatLanguageModels.json
- *   5. If companion MCP tools exist for this provider, offer to install them into mcp.json
+ *   5. If companion MCP tools exist for this provider, offer to register them as extension-managed MCP servers
  *   6. Show confirmation
  */
 export async function addModelCommand(context?: vscode.ExtensionContext): Promise<void> {
@@ -159,37 +158,9 @@ export async function addModelCommand(context?: vscode.ExtensionContext): Promis
       }
     );
 
-    if (mcpChoice?.action === 'install') {
-      const wsPath = workspaceMcpConfigPath();
-      const targetOptions = [
-        {
-          label: '$(globe) User Profile (Global)',
-          description: userMcpConfigPath(),
-          detail: 'Available across all workspaces.',
-          path: userMcpConfigPath(),
-        },
-      ];
-      if (wsPath) {
-        targetOptions.push({
-          label: '$(folder) Current Workspace Folder',
-          description: wsPath,
-          detail: 'Available only in this workspace (.vscode/mcp.json).',
-          path: wsPath,
-        });
-      }
-
-      const targetPick = await vscode.window.showQuickPick(targetOptions, {
-        title: `Copilot Provider Bridge - Choose MCP Target File`,
-        placeHolder: 'Select target mcp.json file',
-        ignoreFocusOut: true,
-      });
-
-      if (targetPick) {
-        const existingMcp = await readMcpFile(targetPick.path);
-        const mergedMcp = mergeMcpConfig(existingMcp, companionPresets);
-        await writeMcpFile(targetPick.path, mergedMcp);
-        Logger.info(`Installed ${companionPresets.length} companion MCP tools for ${provider.name} into ${targetPick.path}`);
-      }
+    if (mcpChoice?.action === 'install' && context) {
+      const installed = await installMcpPresets(context, companionPresets, 'merge');
+      Logger.info(`Installed ${installed} companion MCP tools for ${provider.name}`);
     }
   }
 

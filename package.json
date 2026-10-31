@@ -18,7 +18,7 @@
     "url": "https://buymeacoffee.com/thejjw"
   },
   "engines": {
-    "vscode": "^1.122.0"
+    "vscode": "^1.125.0"
   },
   "categories": [
     "AI",
@@ -40,6 +40,7 @@
   "main": "dist/extension.js",
   "activationEvents": [
     "onStartupFinished",
+    "onMcpCollection:copilot-provider-bridge-mcp",
     "onCommand:copilot-provider-bridge.quickSetup",
     "onCommand:copilot-provider-bridge.addModel",
     "onCommand:copilot-provider-bridge.removeModel",
@@ -96,6 +97,12 @@
             }
           }
         }
+      }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "copilot-provider-bridge-mcp",
+        "label": "Copilot Provider Bridge"
       }
     ],
     "commands": [
@@ -924,11 +931,12 @@
     "pretest": "npm run build",
     "test": "node scripts/smoke-test.mjs",
     "test:unit": "vitest run",
+    "vscode:prepublish": "npm run build",
     "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "@types/vscode": "~1.120.0",
+    "@types/vscode": "~1.125.0",
     "@vscode/vsce": "^3.6.0",
     "esbuild": "^0.28.2",
     "typescript": "^5.6.0",

@@ -5,6 +5,8 @@ import { addModelCommand } from './commands/addProvider';
 import { removeModelCommand } from './commands/removeProvider';
 import { listModelsCommand } from './commands/listProviders';
 import { configureMcpCommand } from './commands/addMcp';
+import { migrateLegacyMcpServers, registerBridgeMcpServerProvider } from './mcpServerProvider';
+import { MCP_PROVIDER_ID } from './mcpServerProvider';
 import { removeMcpCommand } from './commands/removeMcp';
 import { quickSetupCommand } from './commands/setup';
 import { configureUsageKeyCommand } from './commands/configureUsageKey';
@@ -40,12 +42,15 @@ export {
   type ConfigFile,
 } from './config';
 export {
-  mergeMcpConfig,
+  resolvePresetServer,
+  matchesPresetServer,
+  computeNextPresetIds,
   type McpPreset,
-  type McpConfigFile,
   type McpInputDefinition,
   type McpServerDefinition,
+  type ResolvedMcpServer,
 } from './mcpCatalog';
+export { MCP_PROVIDER_ID } from './mcpServerProvider';
 export { quickSetupCommand, validateProviderKey } from './commands/setup';
 export { configureUsageKeyCommand } from './commands/configureUsageKey';
 export { selectVisionModelCommand } from './commands/selectVisionModel';
@@ -67,6 +72,11 @@ export function activate(context: vscode.ExtensionContext): void {
   void (async () => {
     await catalogStore.init(context);
     await runCatalogUpgradeNotice(context);
+    try {
+      await migrateLegacyMcpServers(context);
+    } catch (err) {
+      Logger.warn('Legacy MCP migration failed; will retry on next activation', err);
+    }
   })();
 
 
@@ -81,13 +91,22 @@ export function activate(context: vscode.ExtensionContext): void {
     Logger.debug(`Registered LanguageModelTool: ${CopilotProviderBridgeVisionTool.toolId}`);
   }
 
+  // Register the extension-managed MCP presets before commands so the provider
+  // exists as soon as the language model MCP collection asks for definitions.
+  if (typeof vscode.lm?.registerMcpServerDefinitionProvider === 'function') {
+    context.subscriptions.push(registerBridgeMcpServerProvider(context));
+    Logger.debug(`Registered MCP server definition provider: ${MCP_PROVIDER_ID}`);
+  } else {
+    Logger.warn('MCP server definition provider API unavailable; skipping registration.');
+  }
+
   context.subscriptions.push(
     vscode.commands.registerCommand('copilot-provider-bridge.quickSetup', () => quickSetupCommand(context)),
     vscode.commands.registerCommand('copilot-provider-bridge.addModel', () => addModelCommand(context)),
     vscode.commands.registerCommand('copilot-provider-bridge.removeModel', removeModelCommand),
     vscode.commands.registerCommand('copilot-provider-bridge.listModels', listModelsCommand),
-    vscode.commands.registerCommand('copilot-provider-bridge.configureMcp', configureMcpCommand),
-    vscode.commands.registerCommand('copilot-provider-bridge.removeMcp', removeMcpCommand),
+    vscode.commands.registerCommand('copilot-provider-bridge.configureMcp', () => configureMcpCommand(context)),
+    vscode.commands.registerCommand('copilot-provider-bridge.removeMcp', () => removeMcpCommand(context)),
     vscode.commands.registerCommand('copilot-provider-bridge.configureUsageKey', (providerId) =>
       configureUsageKeyCommand(context, providerId)
     ),

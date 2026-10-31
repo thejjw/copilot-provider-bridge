@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import type { Provider } from '../providers';
 import { catalogStore } from '../catalog/store';
 import { findGroupIndex, providerToConfig, readConfig, writeConfig, userConfigPath } from '../config';
-import { mergeMcpConfig, type McpPreset } from '../mcpCatalog';
-import { readMcpFile, userMcpConfigPath, workspaceMcpConfigPath, writeMcpFile } from './addMcp';
+import type { McpPreset } from '../mcpCatalog';
+import { installMcpPresets } from './addMcp';
 import { Logger } from '../utils/logger';
 
 /** Validate an API key against a provider's live endpoint. */
@@ -79,8 +79,7 @@ export async function validateProviderKey(
  *   2. Prompt for API keys immediately for each selected provider with live validation.
  *   3. Configure models in chatLanguageModels.json ONLY for validated/confirmed providers.
  *   4. Pick companion MCP tools grouped by the validated providers.
- *   5. Select MCP target (User Profile vs Workspace Folder).
- *   6. Safely merge and write both configuration files.
+ *   5. Register them through the extension-managed MCP provider and write chatLanguageModels.json.
  */
 export async function quickSetupCommand(context?: vscode.ExtensionContext): Promise<void> {
   Logger.info('Running Copilot Provider Bridge Quick Setup Wizard...');
@@ -95,7 +94,7 @@ export async function quickSetupCommand(context?: vscode.ExtensionContext): Prom
       provider: p,
     })),
     {
-      title: 'Copilot Provider Bridge: Quick Setup (1/3) - Select Providers',
+      title: 'Copilot Provider Bridge: Quick Setup (1/2) - Select Providers',
       placeHolder: 'Choose which providers you have subscriptions/keys for (Enter to confirm)',
       ignoreFocusOut: true,
       canPickMany: true,
@@ -242,7 +241,7 @@ export async function quickSetupCommand(context?: vscode.ExtensionContext): Prom
         };
       }),
       {
-        title: 'Copilot Provider Bridge: Quick Setup (2/3) - Select Companion MCP Tools',
+        title: 'Copilot Provider Bridge: Quick Setup (2/2) - Select Companion MCP Tools',
         placeHolder: 'Choose companion MCP tools to install (or deselect all to skip)',
         ignoreFocusOut: true,
         canPickMany: true,
@@ -251,38 +250,8 @@ export async function quickSetupCommand(context?: vscode.ExtensionContext): Prom
 
     if (mcpPicks && mcpPicks.length > 0) {
       const selectedMcp = mcpPicks.map((p) => p.preset);
-
-      // Step 5: Choose Target for MCP config
-      const wsPath = workspaceMcpConfigPath();
-      const targetOptions = [
-        {
-          label: '$(globe) User Profile (Global)',
-          description: userMcpConfigPath(),
-          detail: 'Available across all workspaces on this machine.',
-          path: userMcpConfigPath(),
-        },
-      ];
-      if (wsPath) {
-        targetOptions.push({
-          label: '$(folder) Current Workspace Folder',
-          description: wsPath,
-          detail: 'Available only in this workspace (.vscode/mcp.json).',
-          path: wsPath,
-        });
-      }
-
-      const targetPick = await vscode.window.showQuickPick(targetOptions, {
-        title: 'Copilot Provider Bridge: Quick Setup (3/3) - Choose MCP Target File',
-        placeHolder: 'Where should the mcp.json configuration be saved?',
-        ignoreFocusOut: true,
-      });
-
-      if (targetPick) {
-        const existingMcp = await readMcpFile(targetPick.path);
-        const mergedMcp = mergeMcpConfig(existingMcp, selectedMcp);
-        await writeMcpFile(targetPick.path, mergedMcp);
-        mcpInstalledCount = selectedMcp.length;
-        Logger.info(`Installed ${mcpInstalledCount} MCP servers into ${targetPick.path}`);
+      if (context) {
+        mcpInstalledCount = await installMcpPresets(context, selectedMcp, 'merge');
       }
     }
   }

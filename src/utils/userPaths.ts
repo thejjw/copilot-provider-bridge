@@ -28,3 +28,15 @@ export function userConfigPath(): string {
 export function userSettingsDir(): string {
   return path.dirname(userConfigPath());
 }
+
+/** Path to the user-scoped mcp.json (VS Code's global MCP server list). */
+export function userMcpConfigPath(): string {
+  return path.join(userSettingsDir(), 'mcp.json');
+}
+
+/** Paths to every workspace folder's `.vscode/mcp.json` (empty when no folder is open). */
+export function workspaceMcpConfigPaths(): string[] {
+  return (vscode.workspace.workspaceFolders ?? []).map((folder) =>
+    path.join(folder.uri.fsPath, '.vscode', 'mcp.json')
+  );
+}

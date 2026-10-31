@@ -1,64 +1,48 @@
+// Remove installed MCP presets from the extension-managed set (no file access).
+
 import * as vscode from 'vscode';
+import { catalogStore } from '../catalog/store';
 import {
-  readMcpFile,
-  userMcpConfigPath,
-  workspaceMcpConfigPath,
-  writeMcpFile,
-} from './addMcp';
+  getInstalledPresetIds,
+  refreshBridgeMcpServers,
+  setInstalledPresetIds,
+} from '../mcpServerProvider';
 
 /** Command: Copilot Provider Bridge: Remove MCP Server */
-export async function removeMcpCommand(): Promise<void> {
-  const wsPath = workspaceMcpConfigPath();
-  const targetOptions = [
-    {
-      label: '$(globe) User Profile (Global)',
-      description: userMcpConfigPath(),
-      path: userMcpConfigPath(),
-    },
-  ];
-
-  if (wsPath) {
-    targetOptions.push({
-      label: '$(folder) Current Workspace Folder',
-      description: wsPath,
-      path: wsPath,
-    });
-  }
-
-  const targetPick = await vscode.window.showQuickPick(targetOptions, {
-    title: 'Copilot Provider Bridge - Remove MCP Server: Select Target',
-    placeHolder: 'Select the mcp.json file to manage',
-    ignoreFocusOut: true,
-  });
-  if (!targetPick) return;
-
-  const config = await readMcpFile(targetPick.path);
-  if (!config || Object.keys(config.servers).length === 0) {
-    void vscode.window.showInformationMessage('No MCP servers found in the selected configuration file.');
+export async function removeMcpCommand(context: vscode.ExtensionContext): Promise<void> {
+  const installed = getInstalledPresetIds(context);
+  if (installed.length === 0) {
+    void vscode.window.showInformationMessage(
+      'No MCP servers are currently managed by Copilot Provider Bridge. Run Configure MCP Tools to add some.'
+    );
     return;
   }
 
-  const serverKeys = Object.keys(config.servers);
-  const serverPicks = await vscode.window.showQuickPick(
-    serverKeys.map((key) => {
-      const s = config.servers[key];
+  const byId = new Map(catalogStore.get().mcpPresets.map((preset) => [preset.id, preset]));
+  const picks = await vscode.window.showQuickPick(
+    installed.map((id) => {
+      const preset = byId.get(id);
       return {
-        label: key,
-        description: s.type === 'http' ? s.url : `${s.command} ${(s.args ?? []).join(' ')}`,
-        serverKey: key,
+        label: preset?.name ?? id,
+        description: preset?.server.type === 'http' ? '$(cloud) HTTP' : '$(terminal) stdio',
+        detail: preset?.description,
+        id,
       };
     }),
     {
-      title: 'Copilot Provider Bridge - Choose MCP Server to Remove',
-      placeHolder: 'Select the server to remove from configuration',
+      title: 'Copilot Provider Bridge: Remove MCP Server',
+      placeHolder: 'Select the MCP servers to remove (Enter to confirm, Esc to cancel)',
       ignoreFocusOut: true,
+      canPickMany: true,
     }
   );
-  if (!serverPicks) return;
+  if (!picks || picks.length === 0) return;
 
-  const keyToRemove = serverPicks.serverKey;
-  delete config.servers[keyToRemove];
-
-  await writeMcpFile(targetPick.path, config);
-  void vscode.window.showInformationMessage(`Removed MCP server "${keyToRemove}" from mcp.json.`);
+  const removed = new Set(picks.map((pick) => pick.id));
+  await setInstalledPresetIds(
+    context,
+    installed.filter((id) => !removed.has(id))
+  );
+  refreshBridgeMcpServers();
+  void vscode.window.showInformationMessage(`Removed ${removed.size} MCP server(s).`);
 }

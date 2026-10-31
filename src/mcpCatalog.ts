@@ -137,40 +137,103 @@ export function getMcpPresetsForProvider(providerId: ProviderId): McpPreset[] {
   return MCP_PRESETS.filter((p) => p.providerId === providerId);
 }
 
-export interface McpConfigFile {
-  inputs?: McpInputDefinition[];
-  servers: Record<string, McpServerDefinition>;
-  sandbox?: Record<string, unknown>;
-  [key: string]: unknown;
+/** A preset server definition with every `${input:...}` placeholder replaced by a concrete value. */
+export type ResolvedMcpServer =
+  | { kind: 'http'; url: string; headers: Record<string, string> }
+  | { kind: 'stdio'; command: string; args: string[]; env: Record<string, string> };
+
+const INPUT_PLACEHOLDER = /\$\{input:([^}]+)\}/g;
+
+/** Replace every `${input:<id>}` in `value`, recording ids that have no supplied value. */
+function substituteInputs(value: string, values: Record<string, string>, unresolved: Set<string>): string {
+  return value.replace(INPUT_PLACEHOLDER, (_match, id: string) => {
+    const supplied = values[id];
+    if (supplied === undefined) {
+      unresolved.add(id);
+      return '';
+    }
+    return supplied;
+  });
 }
 
-/** Merge presets into an existing or empty mcp.json file, strictly preserving all unrelated top-level properties. */
-export function mergeMcpConfig(
-  existing: McpConfigFile | null | undefined,
-  presets: McpPreset[]
-): McpConfigFile {
-  const currentInputs: McpInputDefinition[] = existing?.inputs ? [...existing.inputs] : [];
-  const currentServers: Record<string, McpServerDefinition> = existing?.servers ? { ...existing.servers } : {};
+/**
+ * Resolve a preset into a concrete server definition by substituting the values
+ * captured for its declared inputs. Throws when the preset is structurally
+ * invalid or an input id has no supplied value.
+ */
+export function resolvePresetServer(preset: McpPreset, values: Record<string, string>): ResolvedMcpServer {
+  const server = preset.server;
+  const unresolved = new Set<string>();
 
-  for (const p of presets) {
-    // Merge inputs without duplicate IDs
-    for (const input of p.inputs) {
-      const exists = currentInputs.some((item) => item.id === input.id);
-      if (!exists) {
-        currentInputs.push(input);
-      }
+  if (server.type === 'http' || server.type === 'sse') {
+    if (!server.url) throw new Error(`MCP preset "${preset.id}" is type ${server.type} but has no url.`);
+    const headers: Record<string, string> = {};
+    for (const [name, template] of Object.entries(server.headers ?? {})) {
+      headers[name] = substituteInputs(template, values, unresolved);
     }
-    // Merge server definition
-    currentServers[p.serverKey] = p.server;
+    if (unresolved.size > 0) {
+      throw new Error(`MCP preset "${preset.id}" references unresolved input(s): ${[...unresolved].join(', ')}`);
+    }
+    return { kind: 'http', url: server.url, headers };
   }
 
-  // Preserve all existing top-level properties (e.g. sandbox, custom fields)
-  const result: McpConfigFile = {
-    ...(existing ?? {}),
-    servers: currentServers,
-  };
-  if (currentInputs.length > 0) {
-    result.inputs = currentInputs;
+  if (!server.command) throw new Error(`MCP preset "${preset.id}" is type stdio but has no command.`);
+  const env: Record<string, string> = {};
+  for (const [name, template] of Object.entries(server.env ?? {})) {
+    env[name] = substituteInputs(template, values, unresolved);
   }
-  return result;
+  if (unresolved.size > 0) {
+    throw new Error(`MCP preset "${preset.id}" references unresolved input(s): ${[...unresolved].join(', ')}`);
+  }
+  return {
+    kind: 'stdio',
+    command: server.command,
+    args: (server.args ?? []).map((arg) => substituteInputs(arg, values, unresolved)),
+    env,
+  };
+}
+
+/** Normalize the transport name: VS Code treats `sse` as an HTTP-family transport. */
+function transportOf(type: unknown): string | undefined {
+  if (type === 'sse') return 'http';
+  return typeof type === 'string' ? type : undefined;
+}
+
+/**
+ * Whether a raw `mcp.json` server entry has the same transport shape as a preset.
+ * Headers and env are ignored so credentials customized in the file still match.
+ */
+export function matchesPresetServer(raw: unknown, preset: McpPreset): boolean {
+  if (typeof raw !== 'object' || raw === null) return false;
+  const entry = raw as Record<string, unknown>;
+  const presetType = transportOf(preset.server.type);
+  if (transportOf(entry.type) !== presetType) return false;
+
+  if (presetType === 'http') {
+    return typeof entry.url === 'string' && entry.url === preset.server.url;
+  }
+  if (presetType === 'stdio') {
+    if (entry.command !== preset.server.command) return false;
+    const rawArgs = Array.isArray(entry.args) ? entry.args : [];
+    const presetArgs = preset.server.args ?? [];
+    return rawArgs.length === presetArgs.length && rawArgs.every((a, i) => a === presetArgs[i]);
+  }
+  return false;
+}
+
+/** Deduplicate preset ids while keeping first-seen order. */
+function dedupe(ids: readonly string[]): string[] {
+  return [...new Set(ids)];
+}
+
+/**
+ * Compute the next installed-preset id list. `replace` uses the selection as the
+ * whole set (an empty selection clears everything); `merge` unions old and new.
+ */
+export function computeNextPresetIds(
+  installed: readonly string[],
+  selected: readonly string[],
+  mode: 'replace' | 'merge'
+): string[] {
+  return mode === 'replace' ? dedupe(selected) : dedupe([...installed, ...selected]);
 }
