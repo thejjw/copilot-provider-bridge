@@ -1,6 +1,6 @@
 # Copilot Provider Bridge
 
-Enables **VS Code Copilot AI features** for users via existing third-party AI coding plans and LLM subscriptions — without requiring a GitHub Copilot subscription. Builds on VS Code 1.125's stable **Custom Endpoint** BYOK provider (OpenAI Chat Completions / Anthropic Messages) and native Model Context Protocol (MCP) support.
+Enables **VS Code Copilot AI features** for users via existing third-party AI coding plans and LLM subscriptions — without requiring a GitHub Copilot subscription. Builds on VS Code 1.122's stable **Custom Endpoint** BYOK provider (OpenAI Chat Completions / Anthropic Messages) and native Model Context Protocol (MCP) support.
 
 ## What it does
 
@@ -104,7 +104,7 @@ The entire model catalog — providers, endpoints, token limits, vision backends
 
 ## Commands
 
-- **Copilot Provider Bridge: Quick Setup (Models & MCP Tools)** — run the first-time setup wizard to configure multiple providers and companion MCP tools in one pass.
+- **Copilot Provider Bridge: Quick Setup (Models & MCP Tools)** — run the first-time setup wizard to configure multiple providers and companion MCP tools in one pass; MCP presets are registered directly, with no target file to choose.
 - **Copilot Provider Bridge: Add Model** — pick a single provider, select models, and optionally install companion MCP tools.
 - **Copilot Provider Bridge: Remove Model** — select an installed provider group and remove it.
 - **Copilot Provider Bridge: List Models** — inspect installed models, endpoints, and token limits.
@@ -117,7 +117,7 @@ The entire model catalog — providers, endpoints, token limits, vision backends
 - **Copilot Provider Bridge: Run Diagnostics & Connectivity Test** — test connectivity to all configured model endpoints and print a detailed report to the Output Channel.
 - **Copilot Provider Bridge: Show Debug Output Logs** — open the dedicated Copilot Provider Bridge output log channel.
 - **Copilot Provider Bridge: Toggle Debug Logging** — toggle verbose debug logging on or off.
-- **Copilot Provider Bridge: Reset All Configuration & Clear Secrets** — reset all Copilot Provider Bridge settings, clear stored secrets in SecretStorage, and clean up bridge models and companion MCP servers.
+- **Copilot Provider Bridge: Reset All Configuration & Clear Secrets** — reset all Copilot Provider Bridge settings, clear stored secrets in SecretStorage, clear the managed MCP server set, and remove any remaining bridge-authored legacy `mcp.json` entries.
 
 - **Copilot Provider Bridge: Customize Provider Catalog (Editable Models & Endpoints)** — create (or recreate) the editable catalog file from the bundled defaults and open it.
 - **Copilot Provider Bridge: Open Provider Catalog File** — reveal the catalog file, offering creation if absent.
