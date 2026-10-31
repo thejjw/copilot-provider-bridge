@@ -5,7 +5,7 @@
 
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
-import { readConfig, writeConfig, userConfigPath } from '../config';
+import { providerIdForConfigGroup, readConfig, writeConfig, userConfigPath } from '../config';
 import { catalogStore } from '../catalog/store';
 import { cleanupLegacyMcpFile } from '../mcpLegacy';
 import {
@@ -55,11 +55,7 @@ export async function resetCopilotProviderBridgeState(
       if (clean) {
         const parsed = JSON.parse(clean);
         if (Array.isArray(parsed)) {
-          const filtered = parsed.filter(
-            (g) =>
-              !g.apiKey?.includes('copilot-provider-bridge.') &&
-              !catalogStore.get().providers.some((p) => g.name === p.name)
-          );
+          const filtered = parsed.filter((g) => providerIdForConfigGroup(g) === undefined);
           await fs.writeFile(targetConfig, JSON.stringify(filtered, null, 2) + '\n', 'utf8');
           Logger.info(`Cleaned chatLanguageModels.json at ${targetConfig}`);
         }

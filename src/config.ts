@@ -4,6 +4,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { EXTENSION_MARKER, type Provider, type ProviderId, type ProviderModel } from './providers';
+import { providerIdForGroup as matchProviderId, sealedApiKeyPlaceholder } from './groupMatch';
 import { Logger } from './utils/logger';
 import { catalogStore } from './catalog/store';
 
@@ -103,27 +104,44 @@ export function modelToConfig(p: Provider, m: ProviderModel, apiKey?: string): C
   return model;
 }
 
-/** Build a full ConfigGroup for one provider. */
-export function providerToConfig(p: Provider, models: ProviderModel[], apiKey?: string): ConfigGroup {
+export interface RenderOptions {
+  /** Write a core-vault pointer instead of accepting a literal key. */
+  sealed?: boolean;
+}
+
+/** Build a full ConfigGroup for one provider. Sealed mode ignores `apiKey`. */
+export function providerToConfig(
+  p: Provider,
+  models: ProviderModel[],
+  apiKey?: string,
+  options?: RenderOptions
+): ConfigGroup {
+  const sealed = options?.sealed === true;
   return {
     name: p.name,
     vendor: 'customendpoint',
     apiType: p.apiType,
-    apiKey: apiKey ?? `\${input:${p.secretInput}}`,
-    models: models.map((m) => modelToConfig(p, m, apiKey)),
+    apiKey: sealed ? sealedApiKeyPlaceholder(p.id) : (apiKey ?? `\${input:${p.secretInput}}`),
+    models: models.map((m) => modelToConfig(p, m, sealed ? undefined : apiKey)),
   };
+}
+
+/** Build a sealed group: JSON holds only the pointer and `Bearer ${apiKey}`. */
+export function providerToSealedConfig(p: Provider, models: ProviderModel[]): ConfigGroup {
+  return providerToConfig(p, models, undefined, { sealed: true });
+}
+
+/** Resolve the provider id for any group this extension wrote, in either mode. */
+export function providerIdForConfigGroup(group: ConfigGroup): ProviderId | undefined {
+  return matchProviderId(group, catalogStore.get().providers);
 }
 
 /** Find the index of the group we previously wrote for `providerId`, or -1. */
 export function findGroupIndex(cfg: ConfigFile, providerId: ProviderId): number {
-  return cfg.findIndex(
-    (g) =>
-      g.apiKey.includes(`${EXTENSION_MARKER}${providerId}.`) ||
-      catalogStore.get().providers.some((p) => p.id === providerId && g.name === p.name)
-  );
+  return cfg.findIndex((g) => providerIdForConfigGroup(g) === providerId);
 }
 
 /** Returns true if any group in the file was written by this extension. */
 export function hasAnyBridgeGroup(cfg: ConfigFile): boolean {
-  return cfg.some((g) => g.apiKey.includes(EXTENSION_MARKER) || catalogStore.get().providers.some((p) => g.name === p.name));
+  return cfg.some((g) => providerIdForConfigGroup(g) !== undefined);
 }

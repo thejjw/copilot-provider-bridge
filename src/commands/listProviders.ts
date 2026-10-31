@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { hasAnyBridgeGroup, readConfig } from '../config';
+import { hasAnyBridgeGroup, providerIdForConfigGroup, readConfig } from '../config';
 
 /** Show every model this extension has installed in a QuickPick with a details view. */
 export async function listModelsCommand(): Promise<void> {
@@ -13,7 +13,7 @@ export async function listModelsCommand(): Promise<void> {
   }
 
   const items = cfg
-    .filter((g) => g.apiKey.includes('copilot-provider-bridge.'))
+    .filter((g) => providerIdForConfigGroup(g) !== undefined)
     .flatMap((g) =>
       g.models.map((m) => ({
         label: m.name,

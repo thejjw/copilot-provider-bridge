@@ -6,7 +6,7 @@ import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import type { ProviderId } from '../providers';
 import { catalogStore } from '../catalog/store';
-import { readConfig } from '../config';
+import { providerIdForConfigGroup, readConfig } from '../config';
 import { Logger } from '../utils/logger';
 
 export async function runDiagnosticsCommand(context: vscode.ExtensionContext): Promise<void> {
@@ -65,8 +65,7 @@ export async function runDiagnosticsCommand(context: vscode.ExtensionContext): P
       let failCount = 0;
 
       for (const group of cfg) {
-        const prov = catalogStore.get().providers.find((p) => group.apiKey.includes(`copilot-provider-bridge.${p.id}.`));
-        const provId = prov?.id;
+        const provId = providerIdForConfigGroup(group);
         const apiKey = provId ? keyMap.get(provId) : undefined;
 
         Logger.info(`\n--- Testing Provider Group: "${group.name}" (vendor: ${group.vendor}, apiType: ${group.apiType}) ---`);

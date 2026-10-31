@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { hasAnyBridgeGroup, readConfig, writeConfig } from '../config';
+import { hasAnyBridgeGroup, providerIdForConfigGroup, readConfig, writeConfig } from '../config';
 
 /**
  * Remove a previously-added bridge group from chatLanguageModels.json.
@@ -18,7 +18,7 @@ export async function removeModelCommand(): Promise<void> {
 
   const picks = cfg
     .map((g, i) => ({ group: g, index: i }))
-    .filter(({ group }) => group.apiKey.includes('copilot-provider-bridge.'))
+    .filter(({ group }) => providerIdForConfigGroup(group) !== undefined)
     .map(({ group, index }) => ({
       label: group.name,
       description: `${group.models.length} model${group.models.length === 1 ? '' : 's'}`,
