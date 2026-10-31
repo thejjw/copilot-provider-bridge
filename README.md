@@ -1,13 +1,13 @@
 # Copilot Provider Bridge
 
-Enables **VS Code Copilot AI features** for users via existing third-party AI coding plans and LLM subscriptions — without requiring a GitHub Copilot subscription. Builds on VS Code 1.122's stable **Custom Endpoint** BYOK provider (OpenAI Chat Completions / Anthropic Messages) and native Model Context Protocol (MCP) support.
+Enables **VS Code Copilot AI features** for users via existing third-party AI coding plans and LLM subscriptions — without requiring a GitHub Copilot subscription. Builds on VS Code 1.125's stable **Custom Endpoint** BYOK provider (OpenAI Chat Completions / Anthropic Messages) and native Model Context Protocol (MCP) support.
 
 ## What it does
 
 1. **Quick Setup Wizard**: On first install (or via Command Palette), guides you through selecting your coding plans and companion MCP tools in one streamlined flow.
 2. **Language Models**: Wires Anthropic-Messages and OpenAI-compatible coding plans into VS Code Copilot Chat's model picker via `%APPDATA%\Code\User\chatLanguageModels.json` (Windows) / `~/.config/Code/User/chatLanguageModels.json` (Linux) / `~/Library/Application Support/Code/User/chatLanguageModels.json` (macOS).
 3. **Built-in Vision Agent Tool**: Allows pure text-only models (like `GLM-5.3` and `DeepSeek V4 Pro`) to automatically delegate screenshot, UI mockup, and diagram inspection to any configured multimodal backend (`GLM-4.6V`, `GLM-5V-Turbo`, `Gemini 2.5 Flash`, `MiniMax M3.1 Flash`, `Kimi K3.1 Pro`, `Qwen 3.8 Max`).
-4. **Companion MCP Tools**: Configures verified MCP tool presets (`web-search-prime`, `web-reader`, `zread`, `zai-mcp-server`, `minimax-mcp`) grouped by provider into user or workspace `mcp.json` with safe `inputs` array definitions.
+4. **Companion MCP Tools**: Registers verified MCP tool presets (`web-search-prime`, `web-reader`, `zread`, `zai-mcp-server`, `minimax-mcp`) through VS Code's `lm.registerMcpServerDefinitionProvider` API. Keys are resolved from SecretStorage at registration time, so the same tools are available in Copilot chat **and** Copilot agent sessions - no `mcp.json` edits and no `${input:...}` prompts.
 5. **Status Bar Quota Indicator & Rich Dashboard Tooltip**:
    - **Status Bar**: Renders bundled offline **Datatype pie chart icons** with exact 1% granularity (`$(copilot-provider-bridge-p<pct>) <pct>%`) for percentage plans (Z.ai, Kimi) or exact balance (e.g. `¥123.45`) for currency models. The badge shows only the provider you **explicitly select** — VS Code exposes no API to detect which chat model is active, so there is deliberately no auto-select guessing. When no provider is selected, a neutral placeholder is shown and the hover tooltip still lists all configured plans.
    - **Hover Dashboard Tooltip**: Live Markdown dashboard with dynamic high-resolution SVG progress meters, multi-window reset countdowns (5-hour rolling window + weekly membership allowance), and clickable action triggers (`[🔄 Refresh]`, `[📌 Select / Clear]`, `[🔑 Configure Keys]`, `[🩺 Diagnostics]`).
@@ -66,7 +66,7 @@ Switch your preferred vision model at any time with **`Copilot Provider Bridge: 
 
 ## Tool-Calling, Web Search & Vision Input Behavior
 
-Copilot Provider Bridge configures models and tools for VS Code's native BYOK engine (`chatLanguageModels.json` and `mcp.json`). VS Code communicates directly with your providers without proxying. Tool execution and multimodal routing follow standard VS Code Copilot rules:
+Copilot Provider Bridge configures models for VS Code's native BYOK engine (`chatLanguageModels.json`) and registers MCP servers through the extension API. VS Code communicates directly with your providers without proxying. Tool execution and multimodal routing follow standard VS Code Copilot rules:
 
 ### 1. Web Search & Fetching
 - **Built-in VS Code Web Tools (`#web`)**:
@@ -108,8 +108,8 @@ The entire model catalog — providers, endpoints, token limits, vision backends
 - **Copilot Provider Bridge: Add Model** — pick a single provider, select models, and optionally install companion MCP tools.
 - **Copilot Provider Bridge: Remove Model** — select an installed provider group and remove it.
 - **Copilot Provider Bridge: List Models** — inspect installed models, endpoints, and token limits.
-- **Copilot Provider Bridge: Configure MCP Tools** — select target (User Profile Global or Workspace `.vscode/mcp.json`) and choose MCP presets grouped by provider.
-- **Copilot Provider Bridge: Remove MCP Server** — choose an MCP server to remove from configuration.
+- **Copilot Provider Bridge: Configure MCP Tools** — choose MCP presets; missing keys are prompted for once and stored in SecretStorage. Presets are registered at runtime and become available in chat and Copilot agent sessions immediately.
+- **Copilot Provider Bridge: Remove MCP Server** — choose which extension-managed MCP servers to stop registering.
 - **Copilot Provider Bridge: Configure Usage API Key** — securely store or update provider keys in extension SecretStorage for live status bar quota polling.
 - **Copilot Provider Bridge: Select Status Bar Provider** — choose which provider's usage badge appears in the bottom status bar (or clear it for a neutral placeholder).
 - **Copilot Provider Bridge: Refresh Plan Quotas & Balances** — query all active provider endpoints and update the status bar tooltip.
@@ -149,7 +149,7 @@ npm run catalog:audit -- --json
 
 ## Requirements
 
-- **VS Code 1.122 or later** (Custom Endpoint provider went Stable May 28 2026).
+- **VS Code 1.125 or later** (Custom Endpoint provider went Stable May 28 2026).
 - **GitHub Copilot Chat** extension installed.
 - An API key for one of the providers above.
 
@@ -160,7 +160,7 @@ git clone https://github.com/thejjw/copilot-provider-bridge
 cd copilot-provider-bridge
 npm install
 npm run package
-code --install-extension copilot-provider-bridge-0.1.7.vsix
+code --install-extension copilot-provider-bridge-0.4.0.vsix
 ```
 
 ### Upgrading from v0.1.0
@@ -187,6 +187,7 @@ keys because VS Code SecretStorage data is scoped to the extension ID.
 - **Zero Intermediate Proxy / Zero-Telemetry**: Copilot Provider Bridge does not proxy, intercept, or relay your chat traffic. All chat requests travel directly from VS Code to official provider endpoints over encrypted HTTPS/TLS.
 - **Log Sanitization**: All keys are automatically redacted in extension logs and Output Channel messages (`Logger.maskSecret()` $\rightarrow$ `1234...567`). Connectivity diagnostics proactively sanitize any reflected credentials from upstream error responses.
 - **Factory Reset**: You can clear all extension secrets and purge bridge configurations at any time via the Command Palette: **`Copilot Provider Bridge: Reset All Configuration & Clear Secrets`**.
+- **MCP Credentials Are Never Written to `mcp.json`**: Companion MCP servers are registered through `vscode.lm.registerMcpServerDefinitionProvider`, so their API keys are read from encrypted SecretStorage every time VS Code asks for server definitions. No real key value is stored in any MCP configuration file.
 
 ### 3. Known Limitations & Security Tradeoffs
 - **Why Plaintext on Disk Is Required in Current VS Code**:
@@ -206,7 +207,7 @@ keys because VS Code SecretStorage data is scoped to the extension ID.
 ## How it works
 
 1. **Models**: Writes `chatLanguageModels.json` with `vendor: customendpoint`, verified token limits (`maxInputTokens + maxOutputTokens = contextWindow`), model-level thinking configuration, and model-level auth header overrides (`requestHeaders: { "Authorization": "Bearer <apiKey>" }`).
-2. **MCP**: Writes `mcp.json` with top-level `inputs` array definitions and server maps, strictly preserving all existing top-level fields (such as `sandbox` or custom properties).
+2. **MCP**: Registers the installed presets with `vscode.lm.registerMcpServerDefinitionProvider`, resolving each `${input:<id>}` placeholder from SecretStorage (or the `<PROVIDER>_API_KEY` environment fallback) into concrete headers/env. A one-time cleanup removes the bridge's own legacy `mcp.json` entries (only while transport/URL/command still match) and leaves customized or unrelated entries untouched.
 3. **Vision Agent**: Built-in Language Model Tool automatically delegates visual tasks from text-only models to your preferred multimodal model backend.
 4. **Usage**: Securely manages keys in extension SecretStorage (`context.secrets`) to poll active quota endpoints in background (Z.ai, DeepSeek, MiniMax, Kimi) and updates the compact status bar item and hover tooltip.
 5. **Diagnostics**: Validates endpoint connectivity and outputs diagnostic information to the Output Channel to help troubleshoot authorization and network issues.
