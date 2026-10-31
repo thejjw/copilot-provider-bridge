@@ -1,6 +1,7 @@
 # Sealed credentials for Custom Endpoint models: feasibility and plan
 
-Status: phase 1 implemented (sealed rendering, shared matcher, unit tests); helper not started.
+Status: phases 1-2 implemented (sealed rendering/matching; Rust helper protocol, OSCrypt
+writer, database and JSON update); extension integration not started.
 Phase 0 evidence is confirmed on the installed build except the first real `chat.lm.secret.*` row.
 Branch: `feat/sealed-credential-helper`.
 Baseline: `copilot-provider-bridge` 0.4.0, VS Code 1.143.1 (Electron 43.7.7), Windows 11 x64.
@@ -298,6 +299,10 @@ marker field.
 JSON lines on stdin/stdout. The helper accepts only ids with the `chat.lm.secret.cpb-` prefix,
 refuses to list or decrypt any other `secret://` row, and never writes the key to argv, logs, or
 temporary files.
+
+Source: `helper/` (Rust crate `cpb-credential-helper`; release artifact
+`credential-helper-win32-x64.exe`). The outcome for the next session is written to
+`<userDir>/globalStorage/copilot-provider-bridge-sealed-result.json`.
 
 ```json
 {"op":"apply","userDir":"C:\\Users\\...\\AppData\\Roaming\\Code\\User","config":"<full json>","configSha256":"<hash>","secrets":{"zai":"<key>"}}
