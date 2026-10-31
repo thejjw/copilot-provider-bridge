@@ -55,6 +55,7 @@
     "onCommand:copilot-provider-bridge.showDebugLogs",
     "onCommand:copilot-provider-bridge.toggleDebugLogging",
     "onCommand:copilot-provider-bridge.resetConfiguration",
+    "onCommand:copilot-provider-bridge.sealModelKeys",
     "onCommand:copilot-provider-bridge.customizeCatalog",
     "onCommand:copilot-provider-bridge.openCatalogFile",
     "onCommand:copilot-provider-bridge.reloadCatalog",
@@ -69,6 +70,25 @@
           "type": "boolean",
           "default": false,
           "description": "Enable verbose debug logging to Output Channel and local log file for troubleshooting endpoint issues."
+        },
+        "copilotProviderBridge.credentialStorage": {
+          "type": "string",
+          "enum": ["plaintext", "sealed"],
+          "default": "plaintext",
+          "scope": "application",
+          "markdownDescription": "How Custom Endpoint API keys are stored. `plaintext` keeps today's behavior: the key is written into `chatLanguageModels.json`. `sealed` keeps only an `${input:chat.lm.secret.cpb-<providerId>}` pointer in that file and stores the key in the same encrypted application storage VS Code uses for **Update API Key**. Sealing is opt-in and set automatically after the helper reports success."
+        },
+        "copilotProviderBridge.credentialHelper.path": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "markdownDescription": "Advanced: absolute path to a `credential-helper-win32-x64.exe` build. Leave empty to use the SHA-256-pinned release download. A custom path also requires `#copilotProviderBridge.credentialHelper.sha256#`."
+        },
+        "copilotProviderBridge.credentialHelper.sha256": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "markdownDescription": "Expected lowercase SHA-256 of the helper at `#copilotProviderBridge.credentialHelper.path#`. The helper is refused when this is empty or does not match."
         }
       }
     },
@@ -205,8 +225,21 @@
         "command": "copilot-provider-bridge.checkModelsDev",
         "title": "Check for Updated Models (models.dev)",
         "category": "Copilot Provider Bridge"
+      },
+      {
+        "command": "copilot-provider-bridge.sealModelKeys",
+        "title": "Seal Model API Keys (Optional, Windows x64)",
+        "category": "Copilot Provider Bridge"
       }
     ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "copilot-provider-bridge.sealModelKeys",
+          "when": "isWindows && !remoteName"
+        }
+      ]
+    },
     "jsonValidation": [
       {
         "fileMatch": "copilot-provider-bridge*.jsonc",

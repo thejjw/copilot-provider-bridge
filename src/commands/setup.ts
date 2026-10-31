@@ -1,7 +1,15 @@
 import * as vscode from 'vscode';
 import type { Provider } from '../providers';
 import { catalogStore } from '../catalog/store';
-import { findGroupIndex, providerToConfig, readConfig, writeConfig, userConfigPath } from '../config';
+import {
+  findGroupIndex,
+  providerToConfig,
+  providerToSealedConfig,
+  readConfig,
+  writeConfig,
+  userConfigPath,
+} from '../config';
+import { applySealedUpdate, isSealedCredentialStorage } from '../credentials/sealedMode';
 import type { McpPreset } from '../mcpCatalog';
 import { installMcpPresets } from './addMcp';
 import { Logger } from '../utils/logger';
@@ -206,19 +214,27 @@ export async function quickSetupCommand(context?: vscode.ExtensionContext): Prom
   const cfg = await readConfig();
   let totalModelsAdded = 0;
 
-  for (const p of validatedProviders) {
-    const key = validatedKeys.get(p.id);
-    const group = providerToConfig(p, p.models, key);
-    const existingIdx = findGroupIndex(cfg, p.id);
-    if (existingIdx >= 0) {
-      cfg[existingIdx] = group;
-    } else {
-      cfg.push(group);
+  const sealed = isSealedCredentialStorage() && context !== undefined;
+  if (sealed) {
+    const groups = validatedProviders.map((p) => providerToSealedConfig(p, p.models));
+    await applySealedUpdate(context, cfg, groups, Object.fromEntries(validatedKeys));
+    totalModelsAdded += validatedProviders.reduce((sum, p) => sum + p.models.length, 0);
+    Logger.info(`Queued sealed credentials for ${validatedProviders.length} validated providers`);
+  } else {
+    for (const p of validatedProviders) {
+      const key = validatedKeys.get(p.id);
+      const group = providerToConfig(p, p.models, key);
+      const existingIdx = findGroupIndex(cfg, p.id);
+      if (existingIdx >= 0) {
+        cfg[existingIdx] = group;
+      } else {
+        cfg.push(group);
+      }
+      totalModelsAdded += p.models.length;
     }
-    totalModelsAdded += p.models.length;
+    await writeConfig(cfg);
+    Logger.info(`Configured ${totalModelsAdded} models in chatLanguageModels.json for ${validatedProviders.length} validated providers`);
   }
-  await writeConfig(cfg);
-  Logger.info(`Configured ${totalModelsAdded} models in chatLanguageModels.json for ${validatedProviders.length} validated providers`);
   // Step 4: Check for companion MCP tools for validated providers
   const companionMcpPresets: McpPreset[] = [];
   for (const p of validatedProviders) {
@@ -262,10 +278,11 @@ export async function quickSetupCommand(context?: vscode.ExtensionContext): Prom
     void vscode.commands.executeCommand('copilot-provider-bridge.refreshUsage');
   }
 
-  const msg =
-    `Setup complete! Configured ${totalModelsAdded} model${totalModelsAdded === 1 ? '' : 's'} across ${validatedProviders.length} provider${validatedProviders.length === 1 ? '' : 's'}` +
-    (mcpInstalledCount > 0 ? ` and ${mcpInstalledCount} companion MCP server${mcpInstalledCount === 1 ? '' : 's'}.` : '.') +
-    ` All models are ready to use in Copilot Chat immediately.`;
+  const msg = sealed
+    ? `Setup prepared ${totalModelsAdded} model${totalModelsAdded === 1 ? '' : 's'} across ${validatedProviders.length} provider${validatedProviders.length === 1 ? '' : 's'} for sealed storage. Quit VS Code now so the helper can finish; models become available on the next launch.`
+    : `Setup complete! Configured ${totalModelsAdded} model${totalModelsAdded === 1 ? '' : 's'} across ${validatedProviders.length} provider${validatedProviders.length === 1 ? '' : 's'}` +
+      (mcpInstalledCount > 0 ? ` and ${mcpInstalledCount} companion MCP server${mcpInstalledCount === 1 ? '' : 's'}.` : '.') +
+      ` All models are ready to use in Copilot Chat immediately.`;
 
   void vscode.window.showInformationMessage(
     msg,

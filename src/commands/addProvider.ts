@@ -4,10 +4,12 @@ import type { Provider, ProviderModel } from '../providers';
 import {
   findGroupIndex,
   providerToConfig,
+  providerToSealedConfig,
   readConfig,
   userConfigPath,
   writeConfig,
 } from '../config';
+import { applySealedUpdate, isSealedCredentialStorage } from '../credentials/sealedMode';
 import { installMcpPresets } from './addMcp';
 import { validateProviderKey } from './setup';
 import { Logger } from '../utils/logger';
@@ -124,13 +126,21 @@ export async function addModelCommand(context?: vscode.ExtensionContext): Promis
 
   // Merge into the existing file. If we already wrote a group for this provider, replace it.
   const cfg = await readConfig();
-  const idx = findGroupIndex(cfg, provider.id);
-  const group = providerToConfig(provider, models, keyToUse);
-  if (idx >= 0) cfg[idx] = group;
-  else cfg.push(group);
+  const sealed = isSealedCredentialStorage() && context !== undefined && keyToUse !== undefined;
+  if (sealed) {
+    await applySealedUpdate(context, cfg, [providerToSealedConfig(provider, models)], {
+      [provider.id]: keyToUse!,
+    });
+    Logger.info(`Queued sealed credentials for ${provider.name}`);
+  } else {
+    const idx = findGroupIndex(cfg, provider.id);
+    const group = providerToConfig(provider, models, keyToUse);
+    if (idx >= 0) cfg[idx] = group;
+    else cfg.push(group);
 
-  await writeConfig(cfg);
-  Logger.info(`Wrote ${models.length} models for ${provider.name} to chatLanguageModels.json`);
+    await writeConfig(cfg);
+    Logger.info(`Wrote ${models.length} models for ${provider.name} to chatLanguageModels.json`);
+  }
 
   if (context) {
     void vscode.commands.executeCommand('copilot-provider-bridge.refreshUsage');
@@ -164,7 +174,9 @@ export async function addModelCommand(context?: vscode.ExtensionContext): Promis
     }
   }
 
-  const msg = `Added ${provider.name} (${models.length} model${models.length === 1 ? '' : 's'}) to chatLanguageModels.json. All models are ready to use in Copilot Chat immediately.`;
+  const msg = sealed
+    ? `Prepared ${provider.name} (${models.length} model${models.length === 1 ? '' : 's'}) for sealed storage. Quit VS Code now so the helper can finish; models become available on the next launch.`
+    : `Added ${provider.name} (${models.length} model${models.length === 1 ? '' : 's'}) to chatLanguageModels.json. All models are ready to use in Copilot Chat immediately.`;
   void vscode.window.showInformationMessage(
     msg,
     'Reveal chatLanguageModels.json'

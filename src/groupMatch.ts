@@ -34,6 +34,16 @@ export function sealedApiKeyPlaceholder(providerId: ProviderId): string {
   return `\${input:${sealedSecretId(providerId)}}`;
 }
 
+/** Whether a group's apiKey is the sealed pointer for some provider. */
+export function isSealedApiKey(apiKey: string): boolean {
+  return SEALED_PLACEHOLDER.test(apiKey);
+}
+
+/** Provider ids accepted by the helper's protocol. */
+export function isSealableProviderId(providerId: string): boolean {
+  return /^[A-Za-z0-9._-]+$/.test(providerId);
+}
+
 const SEALED_PLACEHOLDER = /^\$\{input:chat\.lm\.secret\.cpb-([^}]+)\}$/;
 // Greedy id so a dotted custom id (`my.prov`) survives the fixed suffix.
 const PLAINTEXT_PLACEHOLDER = /^\$\{input:copilot-provider-bridge\.(.+)\.apiKey\}$/;

@@ -6,6 +6,7 @@
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { providerIdForConfigGroup, readConfig, writeConfig, userConfigPath } from '../config';
+import { queueSealedSecretDeletion } from '../credentials/sealedMode';
 import { catalogStore } from '../catalog/store';
 import { cleanupLegacyMcpFile } from '../mcpLegacy';
 import {
@@ -76,6 +77,12 @@ export async function resetCopilotProviderBridgeState(
     }
   }
   refreshBridgeMcpServers();
+
+  // Sealed rows outlive the JSON groups; queue their deletion for editor exit.
+  await queueSealedSecretDeletion(
+    context,
+    catalogStore.get().providers.map((provider) => provider.id)
+  );
 
   return { clearedSecretsCount };
 }

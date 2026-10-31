@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import type { ProviderId } from '../providers';
 import { catalogStore } from '../catalog/store';
 import { providerIdForConfigGroup, readConfig } from '../config';
+import { isSealedApiKey } from '../groupMatch';
 import { Logger } from '../utils/logger';
 
 export async function runDiagnosticsCommand(context: vscode.ExtensionContext): Promise<void> {
@@ -63,6 +64,19 @@ export async function runDiagnosticsCommand(context: vscode.ExtensionContext): P
       progress.report({ message: 'Testing live model endpoints...' });
       let passCount = 0;
       let failCount = 0;
+
+      // 2b. Report the credential mode per catalog provider.
+      for (const provider of catalogStore.get().providers) {
+        const group = cfg.find((entry) => providerIdForConfigGroup(entry) === provider.id);
+        const mode = group
+          ? isSealedApiKey(group.apiKey)
+            ? 'sealed'
+            : 'plaintext'
+          : keyMap.has(provider.id)
+            ? 'extension secret only'
+            : 'not configured';
+        Logger.info(`[Credential Mode] ${provider.name}: ${mode}`);
+      }
 
       for (const group of cfg) {
         const provId = providerIdForConfigGroup(group);

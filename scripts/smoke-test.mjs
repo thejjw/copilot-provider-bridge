@@ -32,6 +32,7 @@
 //   6. Packaged .vsix existence and non-zero size.
 
 import * as fsPromises from 'node:fs/promises';
+import * as nodeCrypto from 'node:crypto';
 import * as nodePath from 'node:path';
 import * as nodeOs from 'node:os';
 const { readFile, stat, writeFile, mkdir, rm } = fsPromises;
@@ -128,6 +129,14 @@ const moduleScope = {
     if (id === 'node:fs/promises' || id === 'fs/promises') return fsPromises;
     if (id === 'node:os' || id === 'os') return nodeOs;
     if (id === 'node:path' || id === 'path') return nodePath;
+    if (id === 'node:crypto' || id === 'crypto') return nodeCrypto;
+    if (id === 'node:child_process' || id === 'child_process') {
+      return {
+        spawn: () => {
+          throw new Error('child_process is not exercised by the smoke test');
+        },
+      };
+    }
     throw new Error(`Unexpected import in test: ${id}`);
   },
 };

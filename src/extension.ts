@@ -23,6 +23,8 @@ import { selectVisionModelCommand } from './commands/selectVisionModel';
 import { runDiagnosticsCommand } from './commands/diagnostics';
 import { UsageStatusBarManager } from './usage/statusBar';
 import { resetConfigurationCommand } from './commands/resetConfiguration';
+import { sealModelKeysCommand } from './commands/sealKeys';
+import { reportSealedCredentialResult } from './credentials/sealedMode';
 import { CopilotProviderBridgeVisionTool } from './tools/visionTool';
 import { catalogStore } from './catalog/store';
 import { Logger } from './utils/logger';
@@ -59,6 +61,13 @@ export { UsageStatusBarManager } from './usage/statusBar';
 export { resetConfigurationCommand, resetCopilotProviderBridgeState } from './commands/resetConfiguration';
 export { getPieGlyph, formatCountdown, type UsageReport } from './usage/types';
 export { CopilotProviderBridgeVisionTool, type VisionBackendOption } from './tools/visionTool';
+export { sealModelKeysCommand } from './commands/sealKeys';
+export {
+  PINNED_HELPER_SHA256,
+  isSealedCredentialStorage,
+  helperResultPath,
+} from './credentials/sealedMode';
+export { checkSealedPreflight } from './credentials/preflight';
 export { VISION_BACKENDS } from './tools/visionBackends';
 export { Logger } from './utils/logger';
 
@@ -66,6 +75,9 @@ export function activate(context: vscode.ExtensionContext): void {
   // Initialize Logger
   Logger.initialize(context);
   Logger.debug('Activating Copilot Provider Bridge extension...');
+
+  // Report the previous session's sealing outcome (helper writes after exit).
+  void reportSealedCredentialResult(context);
 
   // Load the user-editable catalog (falls back to bundled defaults), start
   // watching it, and warn once when it predates this extension version.
@@ -131,6 +143,9 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('copilot-provider-bridge.checkModelsDev', () => checkModelsDevCommand()),
     vscode.commands.registerCommand('copilot-provider-bridge.resetConfiguration', () =>
       resetConfigurationCommand(context)
+    ),
+    vscode.commands.registerCommand('copilot-provider-bridge.sealModelKeys', () =>
+      sealModelKeysCommand(context)
     ),
   );
 

@@ -1,7 +1,8 @@
 # Sealed credentials for Custom Endpoint models: feasibility and plan
 
-Status: phases 1-2 implemented (sealed rendering/matching; Rust helper protocol, OSCrypt
-writer, database and JSON update); extension integration not started.
+Status: phases 1-2 implemented and verified; phase 3 launcher and phase 4 UX implemented but
+not yet exercised in a live extension host; survival fallbacks not implemented (they are gated
+on a failed controlled survival test). Manual gate and helper release publication pending.
 Phase 0 evidence is confirmed on the installed build except the first real `chat.lm.secret.*` row.
 Branch: `feat/sealed-credential-helper`.
 Baseline: `copilot-provider-bridge` 0.4.0, VS Code 1.143.1 (Electron 43.7.7), Windows 11 x64.
@@ -303,6 +304,12 @@ temporary files.
 Source: `helper/` (Rust crate `cpb-credential-helper`; release artifact
 `credential-helper-win32-x64.exe`). The outcome for the next session is written to
 `<userDir>/globalStorage/copilot-provider-bridge-sealed-result.json`.
+
+The extension currently pins SHA-256
+`ab60ff4b321bd51dfe289101a9d925f7904816965199c6d13fc8c2012991750c` for the artifact built from
+this branch. Publish that exact file as the `credential-helper-win32-x64.exe` GitHub release
+asset and update `PINNED_HELPER_SHA256` in `src/credentials/sealedMode.ts` whenever the helper
+binary changes.
 
 ```json
 {"op":"apply","userDir":"C:\\Users\\...\\AppData\\Roaming\\Code\\User","config":"<full json>","configSha256":"<hash>","secrets":{"zai":"<key>"}}
