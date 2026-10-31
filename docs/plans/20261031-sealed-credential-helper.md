@@ -1,6 +1,7 @@
 # Sealed credentials for Custom Endpoint models: feasibility and plan
 
-Status: analysis complete, implementation not started.
+Status: phase 1 implemented (sealed rendering, shared matcher, unit tests); helper not started.
+Phase 0 evidence is confirmed on the installed build except the first real `chat.lm.secret.*` row.
 Branch: `feat/sealed-credential-helper`.
 Baseline: `copilot-provider-bridge` 0.4.0, VS Code 1.143.1 (Electron 43.7.7), Windows 11 x64.
 Source baseline for VS Code claims: `microsoft/vscode` tag `1.143.1` (commit `e646868227`),
