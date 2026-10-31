@@ -101,6 +101,13 @@ describe('cleanupLegacyMcpFile', () => {
     });
   });
 
+  it('treats an empty or whitespace-only file as no change', async () => {
+    await withTempDir(async (dir) => {
+      const file = await writeJsonc(dir, '  \n\t\n');
+      expect(await cleanupLegacyMcpFile(file, MCP_PRESETS)).toEqual({ removedPresetIds: [], changed: false });
+    });
+  });
+
   it('reports no change for a missing file', async () => {
     await withTempDir(async (dir) => {
       const result = await cleanupLegacyMcpFile(path.join(dir, 'absent.json'), MCP_PRESETS);
