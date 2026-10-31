@@ -6,10 +6,135 @@ Baseline: `copilot-provider-bridge` 0.4.0, VS Code 1.143.1 (Electron 43.7.7), Wi
 Source baseline for VS Code claims: `microsoft/vscode` tag `1.143.1` (commit `e646868227`),
 matching the installed build.
 
+## Purpose of this document
+
+This is the standalone design record for an optional credential-hardening feature: moving
+Custom Endpoint API keys out of `chatLanguageModels.json` and into the storage VS Code core
+itself uses for BYOK secrets. It states the problem, what the feature is meant to achieve and
+what it deliberately does not, the evidence gathered on the installed build, the design,
+the implementation phases, and the release gate. Everything needed to review or implement
+the work is here; no other analysis notes are required.
+
+## Background
+
+### What the extension does today
+
+Copilot Provider Bridge automates the setup of VS Code Copilot Chat "Custom Endpoint" (BYOK)
+providers. The user runs Quick Setup or Add Model, the extension writes a provider group into
+the user-private `chatLanguageModels.json` (Windows:
+`%APPDATA%\Code\User\chatLanguageModels.json`), and Copilot Chat can use those models
+immediately.
+
+Chat authentication does not come from the group's `apiKey` field. The value that actually
+authenticates is the literal `Authorization: Bearer <key>` entry in each model's
+`requestHeaders`. The extension therefore currently writes the raw key into that JSON file,
+because VS Code's Custom Endpoint engine reads request headers directly from the file and has
+no extension-facing API to supply them at request time.
+
+The extension keeps a second, independent copy of each key in `context.secrets`
+(extension SecretStorage). That copy is encrypted through the official API and is used by
+quota polling, MCP presets, the vision tool, and diagnostics. It is not what authenticates
+chat requests, so it does not protect the JSON copy.
+
+### The problem
+
+`chatLanguageModels.json` is plaintext on disk. The README documents this as a known
+tradeoff: unencrypted profile backups, roaming-profile syncs, tools that open the file, and
+any process running as the same OS user can read the working key from it. The extension
+cannot fix this through the public API because there is currently no supported way for a
+third-party extension to deposit a secret into core's BYOK vault or to seed a provider's
+secret dialog. Two upstream issues track this gap:
+
+- `microsoft/vscode#326434` — supported, non-interactive provisioning of BYOK secret values
+  into SecretStorage. Open as of 2026-10-31.
+- `microsoft/vscode#322545` — `${env:...}` is not resolved in `chatLanguageModels.json`.
+  Closed unfixed.
+
+### What "sealing" means
+
+Core itself can already resolve a custom-endpoint key from its own application-scope secret
+storage: "Update API Key" in Manage Language Models mints a `chat.lm.secret.<hash>` row, marks
+it machine-scoped, and writes `apiKey: "${input:chat.lm.secret.<hash>}"` into the group. At
+request time the in-repo Copilot extension substitutes that resolved key wherever a header
+contains the `${apiKey}` token, and the JSON keeps only the pointer.
+
+Sealing reproduces only that storage step for the bridge's providers, then rewrites the group
+so it holds a stable pointer instead of a key:
+
+```json
+{
+  "name": "Z.ai GLM Coding Plan",
+  "vendor": "customendpoint",
+  "apiType": "messages",
+  "apiKey": "${input:chat.lm.secret.cpb-zai}",
+  "models": [
+    {
+      "id": "glm-5.3",
+      "requestHeaders": { "Authorization": "Bearer ${apiKey}" }
+    }
+  ]
+}
+```
+
+The row lives in the same `state.vscdb` table core uses, is encrypted with the same OSCrypt
+key (`Local State` → `os_crypt.encrypted_key`, DPAPI-wrapped on Windows), and is read back by
+the same `BaseSecretStorageService`. Chat works exactly as before; the file and its copies no
+longer contain the key.
+
+What this buys: `chatLanguageModels.json`, its backups, an editor opened on it, and profile
+copies no longer expose a usable key; the file is equivalent to what the official UI writes.
+What it does not buy: protection against a process running as the same Windows user, which
+can still decrypt the OSCrypt-protected row. Sealing is a file-exposure mitigation, not an
+anti-malware boundary. It also relies on the internal storage layout, which VS Code can
+change at any release.
+
+### Scope in one line
+
+Optional, opt-in, Windows x64 stable `Code` with the default user-data directory. Plaintext
+stays the default; nothing is downloaded, spawned, or written differently unless the user
+runs the new command and quits as instructed.
+
+### Terms
+
+| Term | Meaning here |
+|---|---|
+| Custom Endpoint / BYOK | VS Code's native "Manage Language Models" providers, stored in `chatLanguageModels.json` |
+| Core vault / application storage | VS Code's `state.vscdb`, table `ItemTable`, application scope, machine target |
+| OSCrypt | Chromium's per-user encryption layer on Windows: DPAPI-wrapped AES key in `Local State`, `v10` AES-256-GCM blobs |
+| DPAPI | Windows per-user data protection; the current wrapping of the OSCrypt key |
+| App-bound encryption | Chromium mode where only the owning executable can use the key; unsupported, fail closed |
+| Plaintext mode | Today's behavior: raw key in the model's `Authorization` header |
+| Sealed mode | Key in `secret://chat.lm.secret.cpb-<providerId>`, JSON holds `${input:...}` and `Bearer ${apiKey}` |
+| `cpb-` id | Bridge-owned stable secret id `chat.lm.secret.cpb-<providerId>`; enables overwrite-on-rotation and delete-on-reset |
+| Result file | Helper-written report under `globalStorage`, read on the next startup because the extension is already gone when the write happens |
+
+## Goals and non-goals
+
+Goals:
+
+1. Remove raw provider keys from `chatLanguageModels.json` for opted-in users, using the same
+   storage mechanism and pointer syntax core uses.
+2. Leave the default install byte-for-byte unchanged: no download, no spawn, plaintext headers.
+3. Keep rotation, reset, diagnostics, Quick Setup, and Add Model working in sealed mode.
+4. Never produce a partial state: a failure leaves the previous plaintext JSON untouched and
+   reports the helper's error.
+5. Fail closed on an unexpected storage layout (app-bound encryption, unknown format,
+   unsupported flavor) rather than guessing.
+
+Non-goals:
+
+- Defending against a same-user process, malware, or an attacker who can read the user profile.
+- Supporting macOS, Linux, ARM64, Insiders, or remote windows in v1. Insiders and remote have a
+  different `Local State` and/or database location and need separate verification.
+- Replacing or removing the `context.secrets` copies. Quota, MCP, and the vision tool read only
+  those.
+- Adding a third marker field to the group; "Update API Key" drops unknown fields.
+- Upstream API work. When `vscode#326434` ships, the helper should be deleted and its CLI used.
+
 ## Merge policy (read before merging)
 
-This document is branch-only. It, the original workspace plan, and any spike scripts or notes
-must NOT reach `main`. They exist to justify and sequence the code, not to ship.
+This document is branch-only. It and any analysis notes or spike scripts must NOT reach
+`main`. They exist to justify and sequence the code, not to ship.
 
 Before the final merge:
 
@@ -28,20 +153,20 @@ earlier retest corrected:
    reruns fixed the harness: the no-quit run wrote both the start and final markers; the quit run
    wrote the final marker 40 s after every test editor process was gone, while the extension host
    reported `IsProcessInJob=true`. Job membership alone does not predict death on this build.
-   WMI-created children also survived. The original detach-and-wait design is therefore viable;
+   WMI-created children also survived. The detach-and-wait design below is therefore viable;
    keep WMI/named-pipe and live-write as ranked fallbacks if another build or endpoint agent
    behaves differently.
-2. **A secret row written into the live `state.vscdb` is not overwritten on shutdown.** The
-   original plan's gate-2 assumption ("the storage cache flushes over it") is false. `Storage`
-   loads all rows once at startup and flushes only pending keys on close. A live external insert
-   survived a graceful quit and decrypted correctly afterwards. A synchronous helper is viable as
-   a fallback, at the cost of a live DB write and a forced restart.
+2. **A secret row written into the live `state.vscdb` is not overwritten on shutdown.** An
+   earlier assumption that "the storage cache flushes over it" is false. `Storage` loads all
+   rows once at startup and flushes only pending keys on close. A live external insert survived
+   a graceful quit and decrypted correctly afterwards. A synchronous helper is viable as a
+   fallback, at the cost of a live DB write and a forced restart.
 3. **Unknown top-level fields do not survive "Update API Key".** Core rebuilds the group from
    `{ name, vendor, ...resolvedConfiguration, settings }`, so a third marker such as
    `"copilotProviderBridge": {...}` is dropped. Sealed detection must rely on the `apiKey`
    placeholder plus the existing display-name fallback.
 
-Recommended v1: keep the original sealed JSON shape and stable `cpb-<providerId>` secret ids;
+Recommended v1: keep the sealed JSON shape above and stable `cpb-<providerId>` secret ids;
 spawn the helper detached with `unref()` and the JSON payload on stdin, have it wait for editor
 exit, then write. Keep the out-of-job launch and the synchronous live-write mode as fallbacks.
 
@@ -131,6 +256,8 @@ All line numbers below were checked against the `1.143.1` tag, matching the inst
   (`src/commands/setup.ts:207-220`, `src/commands/addProvider.ts:120-140`).
 
 ## Sealed representation
+
+The group holds a stable pointer; the row holds the encrypted key:
 
 ```json
 {
@@ -295,3 +422,16 @@ temporary files.
   stay out of scope until their storage layouts are verified.
 - **Security caveat:** sealing removes the key from the JSON file and its backups/sync only. A
   same-user process can still decrypt the DPAPI-protected row. State this in the user-facing docs.
+
+## References
+
+- `microsoft/vscode` `1.143.1` (commit `e646868227`), the installed build for all line-number
+  claims above.
+- [`microsoft/vscode#326434`](https://github.com/microsoft/vscode/issues/326434) — no supported
+  non-interactive way to provision BYOK model secrets; open as of 2026-10-31.
+- [`microsoft/vscode#322545`](https://github.com/microsoft/vscode/issues/322545) — `${env:...}`
+  not resolved; closed unfixed.
+- Chromium `components/os_crypt/sync/os_crypt_win.cc` — `os_crypt.encrypted_key`, `v10` prefix,
+  app-bound key mode.
+- Repository `README.md` §Security & Credential Storage Architecture (0.4.0) — user-facing
+  statement of the current plaintext tradeoff this feature removes.
