@@ -12,12 +12,13 @@
 //      - Asserts Kimi model ids are bare (k3.1-pro) with no [1m] suffix.
 //      - Asserts Google Gemini models are under chat-completions.
 //      - Asserts removed models (deepseek-reasoner, deepseek-chat, qwen3.7-max, MiniMax-Text-01) are absent.
-//   3. MCP Catalog, Grouping & Safe Merge Assertions:
+//   3. MCP Catalog, Grouping & Runtime Resolution Assertions:
 //      - Asserts all 5 presets present (web-search-prime, web-reader, zread, zai-mcp-server, minimax-mcp).
 //      - Asserts getMcpPresetsForProvider('zai') returns 4 tools.
 //      - Asserts getMcpPresetsForProvider('minimax') returns 1 tool.
-//      - Asserts top-level inputs array is properly populated with promptString and password: true.
-//      - Asserts safe merge strictly preserves sandbox and unrelated top-level properties.
+//      - Asserts resolvePresetServer injects headers/env, keeps non-input values, and rejects unresolved ids.
+//      - Asserts matchesPresetServer and computeNextPresetIds drive legacy migration and install modes.
+//      - Asserts the MCP server definition provider id and activation event are declared in package.json.
 //   4. Status Bar & Usage Metrics Assertions:
 //      - Asserts getPieGlyph accurately maps 0-100% to Unicode progress circle fractions.
 //      - Asserts formatCountdown computes human-readable durations.
@@ -140,7 +141,9 @@ const providers = bundledCatalog.providers;
 const providerToConfig = moduleScope.exports.providerToConfig;
 const modelToConfig = moduleScope.exports.modelToConfig;
 const findGroupIndex = moduleScope.exports.findGroupIndex;
-const mergeMcpConfig = moduleScope.exports.mergeMcpConfig;
+const resolvePresetServer = moduleScope.exports.resolvePresetServer;
+const matchesPresetServer = moduleScope.exports.matchesPresetServer;
+const computeNextPresetIds = moduleScope.exports.computeNextPresetIds;
 const mcpPresets = bundledCatalog.mcpPresets;
 const getMcpPresetsForProvider = (providerId) => mcpPresets.filter((p) => p.providerId === providerId);
 const getPieGlyph = moduleScope.exports.getPieGlyph;
@@ -344,39 +347,39 @@ check('minimax tool has providerId minimax', mmMcp[0]?.providerId === 'minimax')
 const dsMcp = getMcpPresetsForProvider('deepseek');
 check('getMcpPresetsForProvider(deepseek) returns empty array', dsMcp.length === 0);
 
-// Test mergeMcpConfig on fresh config
-const freshMcp = mergeMcpConfig(null, mcpPresets);
-check('fresh MCP config has servers object', typeof freshMcp.servers === 'object' && Object.keys(freshMcp.servers).length === 5);
-check('fresh MCP config has inputs array', Array.isArray(freshMcp.inputs) && freshMcp.inputs.length === 2);
-check('inputs array has zai-api-key with password: true',
-  freshMcp.inputs?.some((inp) => inp.id === 'zai-api-key' && inp.type === 'promptString' && inp.password === true)
+// Preset resolution: templates become concrete headers/env at registration time
+const httpResolved = resolvePresetServer(mcpPresets[0], { 'zai-api-key': 'test-key' });
+check('resolvePresetServer injects Z.ai key into HTTP header',
+  httpResolved.kind === 'http' && httpResolved.headers.Authorization === 'Bearer test-key',
+  JSON.stringify(httpResolved)
 );
-check('inputs array has minimax-api-key with password: true',
-  freshMcp.inputs?.some((inp) => inp.id === 'minimax-api-key' && inp.type === 'promptString' && inp.password === true)
+check('resolvePresetServer keeps the HTTP url', httpResolved.kind === 'http' && httpResolved.url === 'https://api.z.ai/api/mcp/web_search_prime/mcp');
+const stdioResolved = resolvePresetServer(mcpPresets.find((p) => p.id === 'minimax-mcp'), { 'minimax-api-key': 'mm-key' });
+check('resolvePresetServer injects MiniMax env',
+  stdioResolved.kind === 'stdio' && stdioResolved.env.MINIMAX_API_KEY === 'mm-key',
+  JSON.stringify(stdioResolved)
 );
-
-// Test merge with existing unrelated servers, inputs, and sandbox fields
-const existingMcp = {
-  inputs: [
-    { type: 'promptString', id: 'custom-token', description: 'Custom', password: true },
-  ],
-  servers: {
-    existingServer: { type: 'http', url: 'https://example.com/mcp' },
-  },
-  sandbox: {
-    filesystem: { allowWrite: ['${workspaceFolder}'] },
-    network: { allowedDomains: ['*.example.com'] },
-  },
-};
-const mergedMcp = mergeMcpConfig(existingMcp, [mcpPresets[0]]); // add web-search-prime
-check('merge preserves existing custom input', mergedMcp.inputs?.some((inp) => inp.id === 'custom-token'));
-check('merge includes new zai input', mergedMcp.inputs?.some((inp) => inp.id === 'zai-api-key'));
-check('merge total inputs count is 2', mergedMcp.inputs?.length === 2);
-check('merge preserves existingServer', mergedMcp.servers.existingServer !== undefined);
-check('merge adds webSearchPrime', mergedMcp.servers.webSearchPrime !== undefined);
-check('merge strictly preserves sandbox configuration',
-  mergedMcp.sandbox?.filesystem?.allowWrite?.[0] === '${workspaceFolder}' &&
-  mergedMcp.sandbox?.network?.allowedDomains?.[0] === '*.example.com'
+check('resolvePresetServer keeps non-input env values', stdioResolved.kind === 'stdio' && stdioResolved.env.MINIMAX_API_HOST === 'https://api.minimax.io');
+check('resolvePresetServer throws on an unresolved input id',
+  (() => { try { resolvePresetServer(mcpPresets[0], {}); return false; } catch (e) { return String(e.message).includes('zai-api-key'); } })()
+);
+check('matchesPresetServer accepts an unchanged preset entry',
+  matchesPresetServer({ type: 'http', url: 'https://api.z.ai/api/mcp/web_search_prime/mcp', headers: { Authorization: 'Bearer user-edited' } }, mcpPresets[0])
+);
+check('matchesPresetServer rejects a customized url',
+  !matchesPresetServer({ type: 'http', url: 'https://self-hosted.example/mcp' }, mcpPresets[0])
+);
+check('matchesPresetServer rejects a different transport',
+  !matchesPresetServer({ type: 'stdio', command: 'node' }, mcpPresets[0])
+);
+check('computeNextPresetIds replace ignores the previous install set',
+  JSON.stringify(computeNextPresetIds(['web-reader', 'zread'], ['zread'], 'replace')) === JSON.stringify(['zread'])
+);
+check('computeNextPresetIds replace with empty selection clears everything',
+  computeNextPresetIds(['web-reader', 'zread'], [], 'replace').length === 0
+);
+check('computeNextPresetIds merge unions and dedupes',
+  JSON.stringify(computeNextPresetIds(['web-reader'], ['web-reader', 'zread', 'zread'], 'merge')) === JSON.stringify(['web-reader', 'zread'])
 );
 
 console.log('\n-- 5. Status Bar Usage & Glyph Assertions --');
@@ -524,6 +527,17 @@ check('Kimi vision backend targets k3.1-pro', VISION_BACKENDS.some((b) => b.prov
 check('CopilotProviderBridgeVisionTool.toolId is provider_bridge_analyze_visual', CopilotProviderBridgeVisionTool.toolId === 'provider_bridge_analyze_visual');
 // Check package.json contribution fields
 const pkgJson = JSON.parse(await readFile(join(here, '..', 'package.json'), 'utf8'));
+const MCP_PROVIDER_ID = moduleScope.exports.MCP_PROVIDER_ID;
+check('MCP provider id is declared in contributes.mcpServerDefinitionProviders',
+  pkgJson.contributes?.mcpServerDefinitionProviders?.some((p) => p.id === MCP_PROVIDER_ID),
+  String(MCP_PROVIDER_ID)
+);
+check('MCP provider activation event is declared',
+  pkgJson.activationEvents?.includes('onMcpCollection:' + MCP_PROVIDER_ID),
+  String(MCP_PROVIDER_ID)
+);
+check('package.json declares vscode:prepublish so packaging bundles current source',
+  pkgJson.scripts?.['vscode:prepublish'] === 'npm run build');
 const contribTool = pkgJson.contributes?.languageModelTools?.[0];
 check('package.json contributes languageModelTools with name', contribTool?.name === 'provider_bridge_analyze_visual');
 check('package.json contributes toolReferenceName: vision', contribTool?.toolReferenceName === 'vision');
@@ -651,10 +665,10 @@ check('reset cleans bridge MCP tools while retaining non-bridge servers', cleane
 // Cleanup temp dir
 await rm(tmpDir, { recursive: true, force: true });
 console.log('\n-- 9. Bundled Datatype Font & Icons --');
-check('package.json engines.vscode is ^1.122.0', pkgJson.engines?.vscode === '^1.122.0');
+check('package.json engines.vscode is ^1.125.0', pkgJson.engines?.vscode === '^1.125.0');
 const pkgLock = JSON.parse(await readFile(join(here, '..', 'package-lock.json'), 'utf8'));
-check('package-lock.json engines.vscode is ^1.122.0', pkgLock.packages?.['']?.engines?.vscode === '^1.122.0');
-check('package-lock.json resolved @types/vscode is 1.120.0 (<= 1.122.0)', pkgLock.packages?.['node_modules/@types/vscode']?.version === '1.120.0');
+check('package-lock.json engines.vscode is ^1.125.0', pkgLock.packages?.['']?.engines?.vscode === '^1.125.0');
+check('package-lock.json resolved @types/vscode is 1.125.0 (<= 1.125.0)', pkgLock.packages?.['node_modules/@types/vscode']?.version === '1.125.0');
 const pkgIcons = pkgJson.contributes?.icons;
 check('package.json contributes icons object', pkgIcons !== undefined && typeof pkgIcons === 'object');
 check('package.json contributes exactly 101 icons (0% to 100%)', Object.keys(pkgIcons || {}).length === 101);
