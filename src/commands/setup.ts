@@ -216,10 +216,19 @@ export async function quickSetupCommand(context?: vscode.ExtensionContext): Prom
 
   const sealed = isSealedCredentialStorage() && context !== undefined;
   if (sealed) {
-    const groups = validatedProviders.map((p) => providerToSealedConfig(p, p.models));
-    await applySealedUpdate(context, cfg, groups, Object.fromEntries(validatedKeys));
-    totalModelsAdded += validatedProviders.reduce((sum, p) => sum + p.models.length, 0);
-    Logger.info(`Queued sealed credentials for ${validatedProviders.length} validated providers`);
+    try {
+      const groups = validatedProviders.map((p) => providerToSealedConfig(p, p.models));
+      await applySealedUpdate(context, cfg, groups, Object.fromEntries(validatedKeys));
+      totalModelsAdded += validatedProviders.reduce((sum, p) => sum + p.models.length, 0);
+      Logger.info(`Queued sealed credentials for ${validatedProviders.length} validated providers`);
+    } catch (err) {
+      Logger.error('Sealed setup failed', err);
+      void vscode.window.showErrorMessage(
+        `Copilot Provider Bridge: sealed setup failed. Nothing was written to chatLanguageModels.json. ${(err as Error).message} ` +
+          'Fix the helper and run Quick Setup again, or set copilotProviderBridge.credentialStorage to plaintext.'
+      );
+      return;
+    }
   } else {
     for (const p of validatedProviders) {
       const key = validatedKeys.get(p.id);

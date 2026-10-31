@@ -82,13 +82,7 @@
           "type": "string",
           "default": "",
           "scope": "application",
-          "markdownDescription": "Advanced: absolute path to a `credential-helper-win32-x64.exe` build. Leave empty to use the SHA-256-pinned release download. A custom path also requires `#copilotProviderBridge.credentialHelper.sha256#`."
-        },
-        "copilotProviderBridge.credentialHelper.sha256": {
-          "type": "string",
-          "default": "",
-          "scope": "application",
-          "markdownDescription": "Expected lowercase SHA-256 of the helper at `#copilotProviderBridge.credentialHelper.path#`. The helper is refused when this is empty or does not match."
+          "markdownDescription": "Advanced: absolute path to a `credential-helper-win32-x64.exe` build. Leave empty to use the pinned release download. The file must match the SHA-256 built into the extension or it is refused."
         }
       }
     },

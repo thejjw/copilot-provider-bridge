@@ -128,10 +128,19 @@ export async function addModelCommand(context?: vscode.ExtensionContext): Promis
   const cfg = await readConfig();
   const sealed = isSealedCredentialStorage() && context !== undefined && keyToUse !== undefined;
   if (sealed) {
-    await applySealedUpdate(context, cfg, [providerToSealedConfig(provider, models)], {
-      [provider.id]: keyToUse!,
-    });
-    Logger.info(`Queued sealed credentials for ${provider.name}`);
+    try {
+      await applySealedUpdate(context, cfg, [providerToSealedConfig(provider, models)], {
+        [provider.id]: keyToUse!,
+      });
+      Logger.info(`Queued sealed credentials for ${provider.name}`);
+    } catch (err) {
+      Logger.error('Sealed Add Model failed', err);
+      void vscode.window.showErrorMessage(
+        `Copilot Provider Bridge: sealed Add Model failed. Nothing was written to chatLanguageModels.json. ${(err as Error).message} ` +
+          'Fix the helper and try again, or set copilotProviderBridge.credentialStorage to plaintext.'
+      );
+      return;
+    }
   } else {
     const idx = findGroupIndex(cfg, provider.id);
     const group = providerToConfig(provider, models, keyToUse);

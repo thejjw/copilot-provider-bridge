@@ -308,8 +308,9 @@ Source: `helper/` (Rust crate `cpb-credential-helper`; release artifact
 The extension currently pins SHA-256
 `ab60ff4b321bd51dfe289101a9d925f7904816965199c6d13fc8c2012991750c` for the artifact built from
 this branch. Publish that exact file as the `credential-helper-win32-x64.exe` GitHub release
-asset and update `PINNED_HELPER_SHA256` in `src/credentials/sealedMode.ts` whenever the helper
-binary changes.
+asset under tag `helper-v0.1.0`, and update `PINNED_HELPER_SHA256` / `HELPER_RELEASE_TAG` in
+`src/credentials/sealedMode.ts` whenever the helper binary changes. A fixed tag is required:
+`releases/latest` would move on every later release and break the pin.
 
 ```json
 {"op":"apply","userDir":"C:\\Users\\...\\AppData\\Roaming\\Code\\User","config":"<full json>","configSha256":"<hash>","secrets":{"zai":"<key>"}}
@@ -352,13 +353,14 @@ binary changes.
 - Do not infer survival from `IsProcessInJob`. Test with an immediate start marker, a delayed
   final marker, and a timestamped "all editor processes gone" file.
 - Preflight before any write: refuse on `process.platform !== 'win32'`, `process.arch !== 'x64'`,
-  non-empty `vscode.env.remoteName`, or `codeFlavor() === 'Code - Insiders'`.
+  non-empty `vscode.env.remoteName`, or an Insiders `appRoot`.
 
 ### Integrity and availability
 
-- Resolve the helper from `copilotProviderBridge.credentialHelper.path` after a hash check, or
-  download `credential-helper-win32-x64.exe` into `globalStorage`, verify a SHA-256 pinned in the
-  extension, and strip `Zone.Identifier`. The pin lives in the extension, never beside the binary.
+- Resolve the helper from `copilotProviderBridge.credentialHelper.path` and check it against the
+  SHA-256 pinned in the extension, or download `credential-helper-win32-x64.exe` from the fixed
+  release tag `helper-v0.1.0` into `globalStorage`, verify the same pin, and strip `Zone.Identifier`.
+  The pin lives in the extension, never beside the binary or in a setting.
 - Say in the prompt that an unsigned helper can trigger SmartScreen once.
 - If the helper is missing or the hash fails, leave plaintext behavior untouched and show the
   error.
@@ -372,6 +374,9 @@ binary changes.
   (skipped), renders the next file in memory, launches the helper, and asks the user to quit.
 - On the next startup, read the result file: success sets the setting to `sealed` and reports
   which providers moved; failure leaves plaintext and shows the helper error.
+- At most one helper may be pending per session. A second sealing request is refused with a
+  quit-first message; Reset kills a pending helper before queueing deletes, which is safe because
+  the helper writes nothing before the editor exits.
 - While `sealed`, Quick Setup and Add Model render the sealed group and send the new key through
   the helper instead of writing it to JSON. Turning the setting off only stops routing new keys
   through the helper; it does not fabricate plaintext.

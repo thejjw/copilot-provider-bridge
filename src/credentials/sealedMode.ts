@@ -3,7 +3,7 @@
 // the default; nothing here runs unless the user invokes the command or turns
 // the setting on.
 
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -24,11 +24,15 @@ import { checkSealedPreflight, type SealedPreflight } from './preflight';
 
 export const HELPER_RESULT_FILENAME = 'copilot-provider-bridge-sealed-result.json';
 const HELPER_ASSET = 'credential-helper-win32-x64.exe';
+const HELPER_RELEASE_TAG = 'helper-v0.1.0';
 const HELPER_RELEASE_URL =
-  'https://github.com/thejjw/copilot-provider-bridge/releases/latest/download/' + HELPER_ASSET;
+  `https://github.com/thejjw/copilot-provider-bridge/releases/download/${HELPER_RELEASE_TAG}/${HELPER_ASSET}`;
 /** SHA-256 of the release asset built from `helper/` (cargo build --release). */
 export const PINNED_HELPER_SHA256 =
   'ab60ff4b321bd51dfe289101a9d925f7904816965199c6d13fc8c2012991750c';
+
+/** At most one detached helper may be pending per session. */
+let pendingHelper: ChildProcess | null = null;
 
 const CONFIG_NAMESPACE = 'copilotProviderBridge';
 
@@ -117,6 +121,11 @@ export async function applySealedUpdate(
 ): Promise<void> {
   const preflight = currentSealedPreflight();
   if (!preflight.ok) throw new Error(preflight.reason);
+  if (pendingHelper && pendingHelper.exitCode === null && !pendingHelper.killed) {
+    throw new Error(
+      'A sealing operation is already pending. Quit VS Code to let it finish before starting another.'
+    );
+  }
 
   const next = mergeSealedGroups(cfg, groups);
   await ensureConfigFile();
@@ -200,6 +209,12 @@ export async function queueSealedSecretDeletion(
   if (!isSealedCredentialStorage() || providerIds.length === 0) return;
   const ids = providerIds.filter(isSealableProviderId).map(sealedSecretId);
   if (ids.length === 0) return;
+  // A pending apply has not written yet, so killing it is safe and avoids
+  // resurrecting groups that reset just removed.
+  if (pendingHelper && pendingHelper.exitCode === null && !pendingHelper.killed) {
+    pendingHelper.kill();
+    pendingHelper = null;
+  }
   try {
     const helperPath = await resolveHelper(context);
     await launchHelper(helperPath, { op: 'delete', userDir: path.dirname(userConfigPath()), ids });
@@ -219,14 +234,9 @@ async function ensureConfigFile(): Promise<void> {
 async function resolveHelper(context: vscode.ExtensionContext): Promise<string> {
   const config = vscode.workspace.getConfiguration(CONFIG_NAMESPACE);
   const configuredPath = (config.get<string>('credentialHelper.path', '') ?? '').trim();
-  const configuredSha = (config.get<string>('credentialHelper.sha256', '') ?? '').trim().toLowerCase();
   if (configuredPath) {
-    if (!configuredSha) {
-      throw new Error(
-        'Set copilotProviderBridge.credentialHelper.sha256 when using a custom helper path.'
-      );
-    }
-    await verifyFileHash(configuredPath, configuredSha);
+    // The pin lives in the extension, never beside the binary.
+    await verifyFileHash(configuredPath, PINNED_HELPER_SHA256);
     return configuredPath;
   }
 
@@ -241,6 +251,11 @@ async function resolveHelper(context: vscode.ExtensionContext): Promise<string> 
   }
 
   const response = await fetch(HELPER_RELEASE_URL, { redirect: 'follow' });
+  if (response.status === 404) {
+    throw new Error(
+      `The credential helper is not published yet (${HELPER_RELEASE_TAG}). Nothing was written.`
+    );
+  }
   if (!response.ok) {
     throw new Error(`Could not download the credential helper (HTTP ${response.status}).`);
   }
@@ -293,6 +308,10 @@ function launchHelper(helperPath: string, payload: ApplyPayload | DeletePayload)
       try {
         const ack = JSON.parse(line) as { ok?: boolean; error?: string };
         if (ack.ok) {
+          pendingHelper = child;
+          child.once('exit', () => {
+            if (pendingHelper === child) pendingHelper = null;
+          });
           child.unref();
           resolve();
         } else {
