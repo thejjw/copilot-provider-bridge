@@ -389,7 +389,8 @@ check('getPieGlyph(50) returns ◑ (50%)', getPieGlyph(50) === '◑');
 check('getPieGlyph(25) returns ◔ (25%)', getPieGlyph(25) === '◔');
 check('getPieGlyph(5) returns ○ (empty)', getPieGlyph(5) === '○');
 
-const future2h = new Date(Date.now() + 2 * 3600 * 1000 + 15 * 60 * 1000);
+// Slack keeps the floor-based formatter on "2h 15m" even if a millisecond elapses before the assert.
+const future2h = new Date(Date.now() + 2 * 3600 * 1000 + 15 * 60 * 1000 + 30 * 1000);
 check('formatCountdown(2h15m) returns in 2h 15m', formatCountdown(future2h) === 'in 2h 15m', formatCountdown(future2h));
 
 // Test UsageStatusBarManager instance & minimal rendering
