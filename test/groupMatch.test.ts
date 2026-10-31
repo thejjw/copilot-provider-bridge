@@ -12,6 +12,7 @@ import {
 const PROVIDERS = [
   { id: 'zai', name: 'Z.ai GLM Coding Plan' },
   { id: 'custom-plan', name: 'Custom Plan' },
+  { id: 'my.prov', name: 'Dotted' },
 ];
 
 describe('sealed ids', () => {
@@ -31,6 +32,10 @@ describe('providerIdFromApiKey', () => {
     expect(providerIdFromApiKey('${input:chat.lm.secret.cpb-zai}')).toBe('zai');
   });
 
+  it('keeps dotted custom ids intact', () => {
+    expect(providerIdFromApiKey('${input:copilot-provider-bridge.my.prov.apiKey}')).toBe('my.prov');
+  });
+
   it('rejects literal keys and core-minted ids', () => {
     expect(providerIdFromApiKey('sk-live-secret')).toBeUndefined();
     expect(providerIdFromApiKey('${input:chat.lm.secret.3f9a2c}')).toBeUndefined();
@@ -46,6 +51,15 @@ describe('providerIdForGroup', () => {
         PROVIDERS,
       ),
     ).toBe('custom-plan');
+  });
+
+  it('resolves a dotted id from a custom secretInput via the catalog', () => {
+    expect(
+      providerIdForGroup(
+        { name: 'Dotted', apiKey: '${input:copilot-provider-bridge.my.prov.custom}' },
+        PROVIDERS,
+      ),
+    ).toBe('my.prov');
   });
 
   it('falls back to the catalog display name for literal-key groups', () => {

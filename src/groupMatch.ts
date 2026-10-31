@@ -34,32 +34,58 @@ export function sealedApiKeyPlaceholder(providerId: ProviderId): string {
   return `\${input:${sealedSecretId(providerId)}}`;
 }
 
+const SEALED_PLACEHOLDER = /^\$\{input:chat\.lm\.secret\.cpb-([^}]+)\}$/;
+// Greedy id so a dotted custom id (`my.prov`) survives the fixed suffix.
+const PLAINTEXT_PLACEHOLDER = /^\$\{input:copilot-provider-bridge\.(.+)\.apiKey\}$/;
+
+function sealedIdFromApiKey(apiKey: string): ProviderId | undefined {
+  const sealed = SEALED_PLACEHOLDER.exec(apiKey);
+  return sealed?.[1] || undefined;
+}
+
+function plaintextIdFromPlaceholder(apiKey: string): ProviderId | undefined {
+  const plaintext = PLAINTEXT_PLACEHOLDER.exec(apiKey);
+  return plaintext?.[1] || undefined;
+}
+
+/** Legacy loose extraction; ambiguous for dotted ids, so it runs last. */
+function looseMarkerId(apiKey: string): ProviderId | undefined {
+  const markerAt = apiKey.indexOf(EXTENSION_MARKER);
+  if (markerAt < 0) return undefined;
+  const rest = apiKey.slice(markerAt + EXTENSION_MARKER.length);
+  const dot = rest.indexOf('.');
+  return dot > 0 ? rest.slice(0, dot) : undefined;
+}
+
 /** Parse the provider id out of a bridge-authored apiKey, in either mode. */
 export function providerIdFromApiKey(apiKey: string): ProviderId | undefined {
   if (!apiKey) return undefined;
-
-  const sealed = /^\$\{input:chat\.lm\.secret\.cpb-([^}]+)\}$/.exec(apiKey);
-  if (sealed && sealed[1]) return sealed[1];
-
-  const markerAt = apiKey.indexOf(EXTENSION_MARKER);
-  if (markerAt >= 0) {
-    const rest = apiKey.slice(markerAt + EXTENSION_MARKER.length);
-    const dot = rest.indexOf('.');
-    if (dot > 0) return rest.slice(0, dot);
-  }
-
-  return undefined;
+  return sealedIdFromApiKey(apiKey) ?? plaintextIdFromPlaceholder(apiKey) ?? looseMarkerId(apiKey);
 }
 
 /**
  * Resolve the provider id for a group, in this order:
- * plaintext marker, sealed placeholder, catalog display name.
+ * sealed placeholder, plaintext placeholder, catalog marker (longest id first),
+ * loose marker, catalog display name.
  */
 export function providerIdForGroup(
   group: GroupIdentity,
   providers: readonly NamedProvider[],
 ): ProviderId | undefined {
-  const fromKey = providerIdFromApiKey(group.apiKey);
-  if (fromKey) return fromKey;
+  const sealed = sealedIdFromApiKey(group.apiKey);
+  if (sealed) return sealed;
+
+  const exact = plaintextIdFromPlaceholder(group.apiKey);
+  if (exact) return exact;
+
+  // A custom `secretInput` may not end in `.apiKey`; match known ids longest-first.
+  const byCatalogMarker = [...providers]
+    .sort((a, b) => b.id.length - a.id.length)
+    .find((p) => group.apiKey.includes(`${EXTENSION_MARKER}${p.id}.`));
+  if (byCatalogMarker) return byCatalogMarker.id;
+
+  const loose = looseMarkerId(group.apiKey);
+  if (loose) return loose;
+
   return providers.find((p) => p.name === group.name)?.id;
 }

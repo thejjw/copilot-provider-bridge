@@ -9,7 +9,6 @@ use crate::error::{HelperError, Result};
 
 pub const V10_PREFIX: &[u8; 3] = b"v10";
 pub const NONCE_LEN: usize = 12;
-#[cfg(test)]
 pub const TAG_LEN: usize = 16;
 
 /// Serialized form of VS Code storage values: `JSON.stringify(Buffer)`.
@@ -44,7 +43,6 @@ pub fn seal(key: &[u8; 32], plaintext: &[u8]) -> Result<Vec<u8>> {
 }
 
 /// Decrypt a `v10` blob. Used by tests and row verification.
-#[cfg(test)]
 pub fn open(key: &[u8; 32], blob: &[u8]) -> Result<Vec<u8>> {
     if blob.len() < V10_PREFIX.len() + NONCE_LEN + TAG_LEN || !blob.starts_with(V10_PREFIX) {
         return Err(HelperError::new("blob is not a v10 OSCrypt value"));

@@ -178,7 +178,7 @@ All checks ran against the real installed build; no secret values were printed.
 
 | Check | Result |
 |---|---|
-| `Local State` -> `os_crypt.encrypted_key` | 283 bytes, starts with the five bytes `DPAPI`; `app_bound_encryption` absent |
+| `Local State` -> `os_crypt.encrypted_key` | 283 bytes, starts with the five bytes `DPAPI`; `app_bound_encrypted_key` absent |
 | OSCrypt key derivation | DPAPI unprotect yields a 32-byte key |
 | Existing secret ciphertext | `v10` + 12-byte nonce + ciphertext + 16-byte GCM tag; decrypts with the derived key |
 | Probe written with the same layout | Encrypt/decrypt roundtrip succeeds |

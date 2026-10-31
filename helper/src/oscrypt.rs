@@ -34,7 +34,7 @@ pub fn derive_key(user_dir: &Path) -> Result<[u8; KEY_LEN]> {
         .and_then(Value::as_object)
         .ok_or_else(|| HelperError::new("Local State has no os_crypt object"))?;
 
-    if os_crypt.contains_key("app_bound_encryption") {
+    if os_crypt.contains_key("app_bound_encrypted_key") {
         return Err(HelperError::new(
             "app-bound encryption is enabled; this helper supports DPAPI only",
         ));
@@ -168,7 +168,7 @@ mod tests {
         assert!(derive_key(&user_dir).is_err());
 
         let app_bound = serde_json::json!({
-            "os_crypt": { "app_bound_encryption": true, "encrypted_key": "DPAPI" }
+            "os_crypt": { "app_bound_encrypted_key": "APPBciphertext", "encrypted_key": "DPAPI" }
         });
         std::fs::write(data_dir.join("Local State"), app_bound.to_string()).unwrap();
         let err = derive_key(&user_dir).unwrap_err();
