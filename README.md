@@ -213,6 +213,16 @@ keys because VS Code SecretStorage data is scoped to the extension ID.
 4. **Usage**: Securely manages keys in extension SecretStorage (`context.secrets`) to poll active quota endpoints in background (Z.ai, DeepSeek, MiniMax, Kimi) and updates the compact status bar item and hover tooltip.
 5. **Diagnostics**: Validates endpoint connectivity and outputs diagnostic information to the Output Channel to help troubleshoot authorization and network issues.
 
+## Agent Harness & Agents Window (VS Code 1.144+)
+
+VS Code 1.144 made the **Copilot harness** (a separate Agent Host process) the default for new agent sessions; 1.146 deprecated the Local harness (removal planned for February 2027) and introduced the **Agents window**.
+
+- **Models**: Custom Endpoint models from `chatLanguageModels.json` are served to harness sessions through VS Code's own BYOK bridge; keys are still resolved inside VS Code. VS Code 1.147 adds streaming for these sessions and omits the `truncation` field for OpenAI-compatible servers (e.g. Kimi). Harness requests carry at most 128 tools; extra tools are dropped.
+- **MCP presets**: Extension-provided servers are forwarded to harness sessions. The bridge registers fully resolved definitions (no `${input:...}`), which harness delivery requires. The resolved keys travel in memory to the Agent Host process and the agent runtime; they are still never written to `mcp.json`.
+- **Vision tool**: Forwarded as a client tool that the model discovers on demand via tool search. Harness sessions may run in a git worktree or without an open folder, so pass **absolute** image paths; a relative path that cannot be found returns an error asking for an absolute one.
+- **Agents window**: It runs its own extension host, and the bridge does not yet declare Agents-window support, so it is off there by default. Models still work there; to get MCP presets and the vision tool, enable the extension for the Agents window (with `extensions.experimental.agentsWindowManagement`). The quota badge only shows in regular windows, since the Agents window has no status bar.
+- **Enterprise policy**: `chat.mcp.access` (`none`/`registry`) and the `ChatAllowedMcpServers` / `ChatDeniedMcpServers` policies can block the presets. **Run Diagnostics** reports these settings.
+
 ## Acknowledgements & Font Credits
 
 - Status bar visual quota indicators bundle [Datatype](https://franktisellano.github.io/datatype/) by [Frank Tisellano](https://github.com/franktisellano/datatype), licensed under the [SIL Open Font License 1.1](./media/fonts/OFL.txt).
