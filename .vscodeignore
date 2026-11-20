@@ -4,6 +4,7 @@ media/icon-original.png
 scripts/**
 test/**
 docs/**
+helper/**
 .eslintrc*
 .prettierrc*
 .gitignore
