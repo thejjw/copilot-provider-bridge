@@ -40,6 +40,8 @@ export async function runDiagnosticsCommand(context: vscode.ExtensionContext): P
         Logger.info('Catalog file does not exist.');
       }
 
+      // 1c. Report MCP policy settings that can silently block the extension-provided presets
+      reportMcpPolicy();
 
       // 2. Inspect configured keys in SecretStorage and environment
       progress.report({ message: 'Checking API keys in SecretStorage & Environment...' });
@@ -141,4 +143,31 @@ export async function runDiagnosticsCommand(context: vscode.ExtensionContext): P
   );
 
   void vscode.window.showInformationMessage('Copilot Provider Bridge Diagnostics finished. See Output Channel for details.');
+}
+
+/**
+ * Log `chat.mcp.access` and the enterprise allow/deny lists (`chat.mcp.allowedServers` /
+ * `chat.mcp.deniedServers`, policy-managed since VS Code 1.130 and enforced for VS Code-started
+ * servers in 1.145+). The lists are hidden settings, so they may read as unset even when a
+ * policy applies; treat this as a hint, not proof.
+ */
+function reportMcpPolicy(): void {
+  const mcp = vscode.workspace.getConfiguration('chat.mcp');
+  const access = mcp.get<string>('access') ?? 'all';
+  const allowed = mcp.get<unknown[] | null>('allowedServers');
+  const denied = mcp.get<unknown[] | null>('deniedServers');
+
+  if (access === 'none') {
+    Logger.warn('[MCP Policy] chat.mcp.access = "none": all MCP servers, including the bridge presets, are disabled.');
+  } else if (access === 'registry') {
+    Logger.warn('[MCP Policy] chat.mcp.access = "registry": only registry-listed servers may run; bridge presets are likely blocked.');
+  } else {
+    Logger.info(`[MCP Policy] chat.mcp.access = "${access}"`);
+  }
+  if (Array.isArray(allowed)) {
+    Logger.warn(`[MCP Policy] Enterprise allowlist active (${allowed.length} entries): bridge presets run only if they match an entry.`);
+  }
+  if (Array.isArray(denied) && denied.length > 0) {
+    Logger.warn(`[MCP Policy] Enterprise denylist active (${denied.length} entries): matching bridge presets are blocked.`);
+  }
 }
