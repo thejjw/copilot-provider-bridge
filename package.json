@@ -76,7 +76,7 @@
       {
         "name": "provider_bridge_analyze_visual",
         "displayName": "Analyze Image / Visual Asset (Copilot Provider Bridge)",
-        "modelDescription": "Inspect and analyze an image file (PNG, JPG, WebP), UI screenshot, diagram, or mockup. Use this tool when you need visual understanding, OCR text extraction, layout descriptions, or architecture analysis for any image.",
+        "modelDescription": "Image, screenshot, vision, OCR, and diagram analysis. Inspect an image file (PNG, JPG, WebP), UI screenshot, diagram, or mockup and return visual understanding, extracted text, layout descriptions, or architecture analysis. Use this whenever the current model cannot see images. Pass an absolute file_path: agent sessions may run in a different working directory than the workspace.",
         "icon": "$(eye)",
         "toolReferenceName": "vision",
         "canBeReferencedInPrompt": true,
@@ -85,7 +85,7 @@
           "properties": {
             "file_path": {
               "type": "string",
-              "description": "Local workspace-relative or absolute file path to the image file (e.g. './assets/mockup.png')."
+              "description": "Absolute path to the image file (preferred; required in worktree or Agents window sessions). A workspace-relative path is resolved against the first workspace folder as a fallback."
             },
             "image_url": {
               "type": "string",

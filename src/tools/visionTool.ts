@@ -6,6 +6,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import type { ProviderId } from '../providers';
 import { catalogStore } from '../catalog/store';
+import { resolveImagePath } from './imagePath';
 
 import type { VisionBackendOption } from './visionBackends';
 
@@ -95,14 +96,13 @@ export class CopilotProviderBridgeVisionTool implements vscode.LanguageModelTool
         dataUrl = image_url;
       }
     } else if (file_path) {
+      // Relative paths are a best-effort guess; harness sessions may use another working dir.
+      const resolvedPath = await resolveImagePath(file_path, vscode.workspace.workspaceFolders?.[0]?.uri.fsPath);
+      if (!resolvedPath.ok) {
+        return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(resolvedPath.error)]);
+      }
       try {
-        let absPath = file_path;
-        if (!path.isAbsolute(absPath)) {
-          const wsFolders = vscode.workspace.workspaceFolders;
-          if (wsFolders && wsFolders.length > 0) {
-            absPath = path.join(wsFolders[0].uri.fsPath, file_path);
-          }
-        }
+        const absPath = resolvedPath.absPath;
         const fileBytes = await fs.readFile(absPath);
         const ext = path.extname(absPath).toLowerCase().replace('.', '');
         const mime = ext === 'png' ? 'image/png' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : 'image/png';
