@@ -6,12 +6,12 @@
 //      - Asserts NO provider-level requestHeaders exists in ConfigGroup.
 //      - Asserts EVERY model has model-level requestHeaders with Authorization Bearer where required.
 //      - Asserts strict token invariant: maxInputTokens + maxOutputTokens === contextWindow for every model.
-//      - Asserts GLM-5.3 has exact effort levels ['low', 'high', 'max'] (no medium).
+//      - Asserts GLM-5.4 has exact effort levels ['low', 'high', 'max'] (no medium).
 //      - Asserts GLM-4.7 and GLM-5V-Turbo have thinking: true without supportsReasoningEffort.
 //      - Asserts DeepSeek V4 has 384K max output (393,216) and derived input (606,784).
 //      - Asserts Kimi model ids are bare (k3.1-pro) with no [1m] suffix.
 //      - Asserts Google Gemini models are under chat-completions.
-//      - Asserts removed models (deepseek-reasoner, deepseek-chat, qwen3.7-max, MiniMax-Text-01) are absent.
+//      - Asserts removed models (glm-5.3, deepseek-reasoner, deepseek-chat, qwen3.7-max, MiniMax-Text-01) are absent.
 //   3. MCP Catalog, Grouping & Runtime Resolution Assertions:
 //      - Asserts all 5 presets present (web-search-prime, web-reader, zread, zai-mcp-server, minimax-mcp).
 //      - Asserts getMcpPresetsForProvider('zai') returns 4 tools.
@@ -209,15 +209,16 @@ check('replacing existing group preserves count and updates models', testCfg.len
 check('updated group contains new key in headers', testCfg[0].models[0].requestHeaders?.Authorization === 'Bearer new-key');
 console.log('\n-- 3. Specific Provider & Model Checks --');
 
-// Z.ai GLM-5.3 reasoning effort check (must be ['low', 'high', 'max'], no medium)
+// Z.ai GLM-5.4 reasoning effort check (must be ['low', 'high', 'max'], no medium)
 const zaiGroup = providerToConfig(providers.find((p) => p.id === 'zai'), providers.find((p) => p.id === 'zai').models);
-const glm53 = zaiGroup.models.find((m) => m.id === 'glm-5.3');
-check('GLM-5.3 reasoning effort levels are explicitly [low, high, max]',
-  JSON.stringify(glm53?.supportsReasoningEffort) === JSON.stringify(['low', 'high', 'max']),
-  JSON.stringify(glm53?.supportsReasoningEffort)
+const glm54 = zaiGroup.models.find((m) => m.id === 'glm-5.4');
+check('GLM-5.4 reasoning effort levels are explicitly [low, high, max]',
+  JSON.stringify(glm54?.supportsReasoningEffort) === JSON.stringify(['low', 'high', 'max']),
+  JSON.stringify(glm54?.supportsReasoningEffort)
 );
-check('GLM-5.3 thinking is true', glm53?.thinking === true);
-check('GLM-5.3 vision is false', glm53?.vision === false);
+check('GLM-5.4 thinking is true', glm54?.thinking === true);
+check('GLM-5.4 vision is true', glm54?.vision === true);
+check('glm-5.3 is removed', !zaiGroup.models.some((m) => m.id === 'glm-5.3'));
 
 
 // Z.ai GLM-5.3-Flash multimodal check (must have vision: true, 1M context, 128K max output, thinking [low, high, max])

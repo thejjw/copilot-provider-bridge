@@ -1,4 +1,4 @@
-// Built-in LanguageModelTool that empowers text-only models (GLM-5.3, DeepSeek V4 Pro, etc.)
+// Built-in LanguageModelTool that empowers text-only models (GLM-4.7, DeepSeek V4 Pro, etc.)
 // to delegate visual analysis, screenshot inspection, and OCR to any configured multimodal backend.
 
 import * as fs from 'node:fs/promises';

@@ -34,6 +34,6 @@ export async function selectVisionModelCommand(context: vscode.ExtensionContext)
 
   await context.globalState.update('copilotProviderBridge.preferredVisionModel', pick.backend.id);
   void vscode.window.showInformationMessage(
-    `Pinned "${pick.backend.name}" as the Vision Agent backend. When text-only models (like GLM-5.3 or DeepSeek V4 Pro) need visual analysis, this model will be invoked.`
+    `Pinned "${pick.backend.name}" as the Vision Agent backend. When text-only models (like GLM-4.7 or DeepSeek V4 Pro) need visual analysis, this model will be invoked.`
   );
 }

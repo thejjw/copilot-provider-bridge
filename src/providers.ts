@@ -66,7 +66,7 @@ export const PROVIDERS: Provider[] = [
   {
     id: 'zai',
     name: 'Z.ai GLM Coding Plan',
-    description: 'Z.ai GLM-5.3 (1M) / GLM-5.3 Flash (1M, Vision) / GLM-4.7 / GLM-5V-Turbo via Coding Plan endpoints.',
+    description: 'Z.ai GLM-5.4 (1M, Vision) / GLM-5.3 Flash (1M, Vision) / GLM-4.7 / GLM-5V-Turbo via Coding Plan endpoints.',
     endpointUrl: 'https://api.z.ai/api/anthropic/v1/messages',
     apiType: 'messages',
     secretInput: 'copilot-provider-bridge.zai.apiKey',
@@ -75,15 +75,15 @@ export const PROVIDERS: Provider[] = [
     },
     models: [
       {
-        id: 'glm-5.3',
-        name: 'GLM 5.3 (1M)',
+        id: 'glm-5.4',
+        name: 'GLM 5.4 (1M, Vision)',
         toolCalling: true,
-        vision: false,
+        vision: true,
         contextWindow: 1_000_000,
         maxOutputTokens: 131_072,
         maxInputTokens: 868_928,
         thinking: true,
-        // Z.ai reasoning_effort is supported on GLM-5.3 with only low, high, max (no medium)
+        // Z.ai reasoning_effort is supported on GLM-5.4 with only low, high, max (no medium)
         supportsReasoningEffort: ['low', 'high', 'max'],
         reasoningEffortFormat: 'messages',
       },
